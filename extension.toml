@@ -1,0 +1,15 @@
+id = "common-lisp"
+name = "Common Lisp"
+version = "0.1.0"
+schema_version = 1
+authors = ["Victor Zhuk"]
+description = "Common Lisp language support for Zed"
+repository = "https://github.com/victorzhuk/zed-lisp"
+
+[grammars.commonlisp]
+repository = "https://github.com/tree-sitter-grammars/tree-sitter-commonlisp"
+commit = "32323509b3d9fe96607d151c2da2c9009eb13a2f"
+
+[language_servers.cl-lsp]
+name = "cl-lsp"
+languages = ["Common Lisp"]

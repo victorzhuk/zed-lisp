@@ -1,0 +1,16 @@
+[package]
+name = "zed_common_lisp"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/common_lisp.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.7.0"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
