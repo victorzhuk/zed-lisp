@@ -1,22 +1,4 @@
-## ADDED Requirements
-
-### Requirement: Language server declaration
-
-The extension SHALL register a language server in `extension.toml` under `[language_servers.cl-lsp]` with `name = "cl-lsp"` and `languages = ["Common Lisp"]` so that Zed associates the server with Common Lisp buffers.
-
-#### Scenario: Opening a Common Lisp project with LSP enabled
-
-- **WHEN** a user opens a workspace containing Common Lisp files
-- **THEN** Zed starts the `cl-lsp` language server for Common Lisp buffers
-
-### Requirement: Rust extension entrypoint
-
-The extension SHALL implement the `zed::Extension` trait in `src/common_lisp.rs` with `language_server_command`, `language_server_initialization_options`, and `language_server_workspace_configuration` methods.
-
-#### Scenario: Extension initialization
-
-- **WHEN** Zed loads the extension
-- **THEN** the extension struct is created and registered via `zed::register_extension!`
+## CHANGED Requirements
 
 ### Requirement: Language server binary resolution precedence
 
@@ -71,30 +53,3 @@ The extension SHALL forward user-configured command-line arguments and environme
 
 - **WHEN** a user configures arguments in Zed LSP settings but no custom path
 - **THEN** those arguments are passed to the `cl-lsp` process found on PATH
-
-### Requirement: LSP initialization options pass-through
-
-The extension SHALL forward user/worktree initialization options to the language server via `language_server_initialization_options`, returning the value from `LspSettings::for_worktree(...).initialization_options`.
-
-#### Scenario: Custom initialization options are defined
-
-- **WHEN** initialization options are configured in Zed LSP settings
-- **THEN** those values are sent unchanged in the `initialize` request to the server
-
-### Requirement: LSP workspace configuration pass-through
-
-The extension SHALL forward user/worktree workspace settings to the language server via `language_server_workspace_configuration`, returning the value from `LspSettings::for_worktree(...).settings`.
-
-#### Scenario: Custom workspace settings are defined
-
-- **WHEN** workspace settings are configured in Zed LSP settings
-- **THEN** those values are sent unchanged in `workspace/didChangeConfiguration` notifications
-
-### Requirement: Code label formatting
-
-The extension SHOULD implement `label_for_completion` to provide styled code labels for LSP completions. Function and method completions SHALL display the full signature with the name portion as the filter range. Symbol completions SHOULD display with appropriate syntax highlighting spans.
-
-#### Scenario: Function completion is shown
-
-- **WHEN** the LSP returns a function completion like `format(stream control-string &rest args)`
-- **THEN** Zed displays the full signature as a code label with the function name as the filterable portion

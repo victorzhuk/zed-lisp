@@ -8,7 +8,7 @@ Common Lisp language support for Zed with syntax highlighting, LSP integration v
 - **Tree-sitter powered parsing** with bracket matching and auto-indentation
 - **Outline panel** showing defun/defmacro/defclass definitions
 - **Language server support** via cl-lsp (completion, hover, go-to-definition, etc.)
-- **Support** for both manual and Roswell-managed cl-lsp installation
+- **Roswell-managed** cl-lsp installation as fallback
 
 ## Prerequisites
 
@@ -37,10 +37,9 @@ Common Lisp language support for Zed with syntax highlighting, LSP integration v
 
 ### Custom Binary Path
 
-Install `cl-lsp` with roswell:
+Install `cl-lsp` with Roswell:
 
 ```sh
-$ yay -S tree-sitter-cli
 $ ros install qlot lem-project/lem lem-project/micros lem-project/lem-mailbox cxxxr/cl-lsp
 ```
 
@@ -148,9 +147,9 @@ The extension is built as a WebAssembly module using the Zed extension API:
 
 - **`zed_extension_api`** — Provides the `Extension` trait that the extension implements to handle language server lifecycle and configuration
 - **Language server resolution** — The extension searches for cl-lsp in this order:
-  1. User-configured path from Zed settings
-  2. Binary on system PATH
-  3. Roswell installation (`~/.roswell/bin/cl-lsp`)
+  1. User-configured path from Zed settings (with optional args/env)
+  2. Binary on system PATH (with optional args/env)
+  3. Roswell installation (`ros install cxxxr/cl-lsp`, then PATH lookup)
 - **Tree-sitter grammar** — Uses [tree-sitter-commonlisp](https://github.com/tree-sitter-grammars/tree-sitter-commonlisp) for parsing Common Lisp syntax
 
 ## Links
