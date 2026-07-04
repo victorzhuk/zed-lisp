@@ -11,10 +11,9 @@ Common Lisp language support for Zed with syntax highlighting, LSP integration v
 
 ## Prerequisites
 
-- [SBCL](https://www.sbcl.org/) (Steel Bank Common Lisp) installed
-- [Roswell](https://github.com/roswell/roswell) installed
+On Linux (x64/arm64) and Apple Silicon macOS, the extension downloads a self-contained [sextant](https://github.com/victorzhuk/sextant) binary from GitHub releases automatically — no other setup required.
 
-The extension resolves the [sextant](https://github.com/victorzhuk/sextant) language server from `PATH`. If it is missing and Roswell is available, the extension builds the latest master on first launch. You can also install it ahead of time:
+On other platforms (e.g. Intel macOS), or to build from source, install [Roswell](https://github.com/roswell/roswell) and the extension will build the latest sextant on first launch. You can also install it ahead of time:
 
 ```sh
 ros install victorzhuk/sextant
@@ -150,7 +149,8 @@ The extension is built as a WebAssembly module using the Zed extension API:
 - **Language server resolution** — The extension searches for sextant in this order:
   1. User-configured path from Zed settings (with optional args/env)
   2. Binary on system PATH (with optional args/env)
-  3. Roswell build of the latest master (`ros install victorzhuk/sextant`), then PATH lookup
+  3. Prebuilt binary from the latest [sextant GitHub release](https://github.com/victorzhuk/sextant/releases) for your platform
+  4. Roswell build of the latest master (`ros install victorzhuk/sextant`), then PATH lookup
 - **Tree-sitter grammar** — Uses [tree-sitter-commonlisp](https://github.com/tree-sitter-grammars/tree-sitter-commonlisp) for parsing Common Lisp syntax
 
 ## Links

@@ -24,9 +24,10 @@ The extension MUST resolve the `sextant` command in this order:
 
 1. **User-configured binary**: `LspSettings::for_worktree` binary path from Zed's LSP settings.
 2. **PATH lookup**: `worktree.which("sextant")` to find an already-installed binary.
-3. **Roswell build**: if `worktree.which("ros")` is available, build the latest master with `ros install victorzhuk/sextant`, then retry the PATH lookup.
+3. **GitHub release download**: for a supported platform (Linux x64/arm64, Apple Silicon macOS), download the matching self-contained `sextant-<platform>` asset from the latest `victorzhuk/sextant` release, cache it under a version-named directory, and mark it executable.
+4. **Roswell build**: if `worktree.which("ros")` is available, build the latest master with `ros install victorzhuk/sextant`, then retry the PATH lookup.
 
-Sextant ships only as source (no pre-built binaries or GitHub releases), so managed acquisition builds it from master via Roswell rather than downloading a binary. If none of the resolution paths yields a binary, the extension SHALL return an error explaining how to install Roswell, the `ros install victorzhuk/sextant` command, how to expose the binary on `PATH`, and how to configure a binary path in Zed settings.
+The download step reuses a previously cached binary when present and prunes stale version directories. When the platform has no published asset, no release is reachable, or the download fails, the extension falls through to the Roswell build. If none of the resolution paths yields a binary, the extension SHALL return an error explaining how to install Roswell, the `ros install victorzhuk/sextant` command, how to expose the binary on `PATH`, and how to configure a binary path in Zed settings.
 
 User-configured arguments and environment variables from `LspSettings` SHALL be forwarded to the server command regardless of which resolution path is taken.
 
@@ -40,9 +41,14 @@ User-configured arguments and environment variables from `LspSettings` SHALL be 
 - **WHEN** no user-configured path is set but `sextant` is on `PATH`, and the user has configured arguments
 - **THEN** the extension uses the discovered binary with the configured arguments and environment
 
-#### Scenario: Roswell build when binary is absent
+#### Scenario: Prebuilt binary downloaded when absent from PATH
 
-- **WHEN** no user-configured path is set, `sextant` is not on `PATH`, and `ros` is available
+- **WHEN** no user-configured path is set, `sextant` is not on `PATH`, and the platform has a published release asset
+- **THEN** the extension reports `Downloading` status, downloads and caches the `sextant-<platform>` binary, marks it executable, and starts it
+
+#### Scenario: Roswell build when no downloadable binary
+
+- **WHEN** no user-configured path is set, `sextant` is not on `PATH`, no release asset is available for the platform (or the download fails), and `ros` is available
 - **THEN** the extension reports `Downloading` status, runs `ros install victorzhuk/sextant`, and on success resolves the built binary from `PATH`
 
 #### Scenario: Roswell build fails
@@ -57,7 +63,7 @@ User-configured arguments and environment variables from `LspSettings` SHALL be 
 
 ### Requirement: Custom server arguments pass-through
 
-The extension SHALL forward user-configured command-line arguments and environment variables from `LspSettings` binary settings to the server command for **all** resolution paths (user config, PATH lookup, and Roswell-built).
+The extension SHALL forward user-configured command-line arguments and environment variables from `LspSettings` binary settings to the server command for **all** resolution paths (user config, PATH lookup, downloaded release, and Roswell-built).
 
 #### Scenario: User specifies server arguments for PATH-resolved binary
 

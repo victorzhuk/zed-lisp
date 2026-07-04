@@ -1,3 +1,7 @@
+## 0.4.0 (2026-07-04)
+
+- Download a prebuilt, self-contained `sextant` binary from the latest GitHub release (Linux x64/arm64, Apple Silicon macOS) when it is not on `PATH`, before falling back to a Roswell source build
+
 ## 0.3.0 (2026-07-04)
 
 - Fix outline panel missing `defun`/`defmacro`/`defgeneric`/`defmethod` definitions

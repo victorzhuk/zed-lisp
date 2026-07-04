@@ -5,11 +5,15 @@ use zed_extension_api::{
     LanguageServerId, LanguageServerInstallationStatus, Worktree,
 };
 
-struct CommonLispExtension;
+struct CommonLispExtension {
+    cached_binary_path: Option<String>,
+}
 
 impl zed::Extension for CommonLispExtension {
     fn new() -> Self {
-        Self
+        Self {
+            cached_binary_path: None,
+        }
     }
 
     fn language_server_command(
@@ -40,6 +44,14 @@ impl zed::Extension for CommonLispExtension {
         }
 
         if let Some(sextant_path) = worktree.which("sextant") {
+            return Ok(zed::Command {
+                command: sextant_path,
+                args,
+                env,
+            });
+        }
+
+        if let Some(sextant_path) = self.download_sextant(language_server_id)? {
             return Ok(zed::Command {
                 command: sextant_path,
                 args,
@@ -150,6 +162,75 @@ impl zed::Extension for CommonLispExtension {
             }
             _ => None,
         }
+    }
+}
+
+impl CommonLispExtension {
+    fn download_sextant(
+        &mut self,
+        language_server_id: &LanguageServerId,
+    ) -> zed::Result<Option<String>> {
+        if let Some(path) = &self.cached_binary_path {
+            if std::fs::metadata(path).is_ok_and(|stat| stat.is_file()) {
+                return Ok(Some(path.clone()));
+            }
+        }
+
+        let asset_name = match zed::current_platform() {
+            (zed::Os::Linux, zed::Architecture::X8664) => "sextant-linux-x64",
+            (zed::Os::Linux, zed::Architecture::Aarch64) => "sextant-linux-arm64",
+            (zed::Os::Mac, zed::Architecture::Aarch64) => "sextant-macos-arm64",
+            _ => return Ok(None),
+        };
+
+        let release = match zed::latest_github_release(
+            "victorzhuk/sextant",
+            zed::GithubReleaseOptions {
+                require_assets: true,
+                pre_release: false,
+            },
+        ) {
+            Ok(release) => release,
+            Err(_) => return Ok(None),
+        };
+
+        let Some(asset) = release.assets.iter().find(|asset| asset.name == asset_name) else {
+            return Ok(None);
+        };
+
+        let version_dir = format!("sextant-{}", release.version);
+        let binary_path = format!("{version_dir}/sextant");
+
+        if !std::fs::metadata(&binary_path).is_ok_and(|stat| stat.is_file()) {
+            set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::Downloading,
+            );
+            zed::download_file(
+                &asset.download_url,
+                &binary_path,
+                zed::DownloadedFileType::Uncompressed,
+            )
+            .map_err(|err| format!("download sextant {}: {err}", release.version))?;
+            zed::make_file_executable(&binary_path)?;
+
+            if let Ok(entries) = std::fs::read_dir(".") {
+                for entry in entries.flatten() {
+                    let name = entry.file_name().to_string_lossy().into_owned();
+                    if name.starts_with("sextant-") && name != version_dir {
+                        std::fs::remove_dir_all(entry.path()).ok();
+                    }
+                }
+            }
+
+            set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::None,
+            );
+        }
+
+        self.cached_binary_path = Some(binary_path.clone());
+        Ok(Some(binary_path))
     }
 }
 
