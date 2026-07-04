@@ -13,14 +13,14 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: rustup default stable
       - run: rustup target add wasm32-wasip1
       - run: cargo fmt --check
       - run: cargo clippy --target wasm32-wasip1 -- -D warnings
       - run: cargo test
       - run: cargo build --release --target wasm32-wasip1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wasm-build
           path: target/wasm32-wasip1/release/zed_common_lisp.wasm
@@ -32,8 +32,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: wasm-build
           path: wasm-build
