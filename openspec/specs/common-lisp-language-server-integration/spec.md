@@ -2,12 +2,12 @@
 
 ### Requirement: Language server declaration
 
-The extension SHALL register a language server in `extension.toml` under `[language_servers.cl-lsp]` with `name = "cl-lsp"` and `languages = ["Common Lisp"]` so that Zed associates the server with Common Lisp buffers.
+The extension SHALL register a language server in `extension.toml` under `[language_servers.sextant]` with `name = "sextant"` and `languages = ["Common Lisp"]` so that Zed associates the server with Common Lisp buffers.
 
 #### Scenario: Opening a Common Lisp project with LSP enabled
 
 - **WHEN** a user opens a workspace containing Common Lisp files
-- **THEN** Zed starts the `cl-lsp` language server for Common Lisp buffers
+- **THEN** Zed starts the `sextant` language server for Common Lisp buffers
 
 ### Requirement: Rust extension entrypoint
 
@@ -20,11 +20,13 @@ The extension SHALL implement the `zed::Extension` trait in `src/common_lisp.rs`
 
 ### Requirement: Language server binary resolution precedence
 
-The extension MUST resolve the `cl-lsp` command in this order:
+The extension MUST resolve the `sextant` command in this order:
 
 1. **User-configured binary**: `LspSettings::for_worktree` binary path from Zed's LSP settings.
-2. **PATH lookup**: `worktree.which("cl-lsp")` to find an already-installed binary.
-3. **Roswell installation**: Run `ros install cxxxr/cl-lsp`, then retry PATH lookup.
+2. **PATH lookup**: `worktree.which("sextant")` to find an already-installed binary.
+3. **Roswell build**: if `worktree.which("ros")` is available, build the latest master with `ros install victorzhuk/sextant`, then retry the PATH lookup.
+
+Sextant ships only as source (no pre-built binaries or GitHub releases), so managed acquisition builds it from master via Roswell rather than downloading a binary. If none of the resolution paths yields a binary, the extension SHALL return an error explaining how to install Roswell, the `ros install victorzhuk/sextant` command, how to expose the binary on `PATH`, and how to configure a binary path in Zed settings.
 
 User-configured arguments and environment variables from `LspSettings` SHALL be forwarded to the server command regardless of which resolution path is taken.
 
@@ -35,42 +37,32 @@ User-configured arguments and environment variables from `LspSettings` SHALL be 
 
 #### Scenario: Binary found on PATH with user arguments
 
-- **WHEN** no user-configured path is set but `cl-lsp` is on `PATH`, and the user has configured arguments
+- **WHEN** no user-configured path is set but `sextant` is on `PATH`, and the user has configured arguments
 - **THEN** the extension uses the discovered binary with the configured arguments and environment
 
-### Requirement: Roswell managed installation
+#### Scenario: Roswell build when binary is absent
 
-If no user-configured or `PATH` binary is available, the extension SHALL attempt installation via Roswell. It MUST report installation status using `zed::set_language_server_installation_status`. The install MUST:
+- **WHEN** no user-configured path is set, `sextant` is not on `PATH`, and `ros` is available
+- **THEN** the extension reports `Downloading` status, runs `ros install victorzhuk/sextant`, and on success resolves the built binary from `PATH`
 
-1. Check that `ros` is available via `worktree.which("ros")`.
-2. Run `ros install cxxxr/cl-lsp` and check the process exit status.
-3. If the exit status is non-zero, report `Failed` with the stderr content.
-4. If the exit status is zero, retry `worktree.which("cl-lsp")` to locate the installed binary.
-5. If the binary is still not found after successful install, report an error advising the user to add `~/.roswell/bin` to PATH.
+#### Scenario: Roswell build fails
 
-#### Scenario: Roswell install succeeds
+- **WHEN** `ros install victorzhuk/sextant` exits with a non-zero status
+- **THEN** the extension reports `Failed` status with the captured stderr
 
-- **WHEN** `ros` is available and `ros install cxxxr/cl-lsp` exits with status 0
-- **THEN** the extension resolves `cl-lsp` from PATH and starts the server
+#### Scenario: No binary and no Roswell
 
-#### Scenario: Roswell install fails
-
-- **WHEN** `ros install cxxxr/cl-lsp` exits with a non-zero status
-- **THEN** the extension reports `Failed` status with the stderr output
-
-#### Scenario: No Roswell available
-
-- **WHEN** no user-configured path, no PATH binary, and no `ros` binary
-- **THEN** the extension returns an error message listing the three installation options
+- **WHEN** no user-configured path is set, `sextant` is not on `PATH`, and `ros` is not available
+- **THEN** the extension returns an error message with the Roswell install command and the Zed settings example
 
 ### Requirement: Custom server arguments pass-through
 
-The extension SHALL forward user-configured command-line arguments and environment variables from `LspSettings` binary settings to the server command for **all** resolution paths (user config, PATH lookup, and Roswell-managed).
+The extension SHALL forward user-configured command-line arguments and environment variables from `LspSettings` binary settings to the server command for **all** resolution paths (user config, PATH lookup, and Roswell-built).
 
 #### Scenario: User specifies server arguments for PATH-resolved binary
 
 - **WHEN** a user configures arguments in Zed LSP settings but no custom path
-- **THEN** those arguments are passed to the `cl-lsp` process found on PATH
+- **THEN** those arguments are passed to the `sextant` process found on PATH
 
 ### Requirement: LSP initialization options pass-through
 

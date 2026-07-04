@@ -1,10 +1,7 @@
 (defun) @function.around
 
 (defun
-  (defun_header
-    (defun_keyword)
-    (_)
-    (_) @function.inside))
+  value: (_)+ @function.inside)
 
 (list_lit) @class.around
 

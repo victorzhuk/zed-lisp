@@ -15,7 +15,15 @@
 ((sym_lit) @constant.builtin
   (#eq? @constant.builtin "t"))
 
+((list_lit
+  .
+  (sym_lit) @function)
+  (#not-match? @function "^(t|defclass|defvar|defparameter|defconstant|defpackage|defstruct|if|when|unless|cond|case|typecase|etypecase|ecase|progn|prog1|prog2|unwind-protect|handler-case|handler-bind|restart-case|block|return-from|catch|throw|tagbody|go|let|let\*|flet|labels|macrolet|symbol-macrolet|multiple-value-bind|destructuring-bind|do|dotimes|dolist|setf|setq|and|or|not)$"))
+
 (defun_keyword) @keyword.function
+
+(defun_header
+  function_name: (sym_lit) @function)
 
 ((list_lit
   .
@@ -25,12 +33,12 @@
 ((list_lit
   .
   (sym_lit) @keyword.control)
-  (#match? @keyword.control "^(if|when|unless|cond|case)$"))
+  (#match? @keyword.control "^(if|when|unless|cond|case|typecase|etypecase|ecase|progn|prog1|prog2|unwind-protect|handler-case|handler-bind|restart-case|block|return-from|catch|throw|tagbody|go)$"))
 
 ((list_lit
   .
   (sym_lit) @keyword.function)
-  (#match? @keyword.function "^(let|let\*|flet|labels)$"))
+  (#match? @keyword.function "^(let|let\*|flet|labels|macrolet|symbol-macrolet|multiple-value-bind|destructuring-bind)$"))
 
 (loop_macro "loop" @keyword.control)
 

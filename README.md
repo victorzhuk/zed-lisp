@@ -1,20 +1,26 @@
 # Common Lisp for Zed
 
-Common Lisp language support for Zed with syntax highlighting, LSP integration via cl-lsp, and Tree-sitter powered parsing.
+Common Lisp language support for Zed with syntax highlighting, LSP integration via sextant, and Tree-sitter powered parsing.
 
 ## Features
 
 - **Syntax highlighting** for Common Lisp source files (.lisp, .lsp, .cl, .asd)
 - **Tree-sitter powered parsing** with bracket matching and auto-indentation
 - **Outline panel** showing defun/defmacro/defclass definitions
-- **Language server support** via cl-lsp (completion, hover, go-to-definition, etc.)
-- **Roswell-managed** cl-lsp installation as fallback
+- **Language server support** via sextant (completion, hover, go-to-definition, etc.)
 
 ## Prerequisites
 
 - [SBCL](https://www.sbcl.org/) (Steel Bank Common Lisp) installed
-- [Roswell](https://github.com/roswell/roswell) (recommended for automatic cl-lsp installation)
-- Or manually installed [cl-lsp](https://github.com/cxxxr/cl-lsp) on PATH
+- [Roswell](https://github.com/roswell/roswell) installed
+
+The extension resolves the [sextant](https://github.com/victorzhuk/sextant) language server from `PATH`. If it is missing and Roswell is available, the extension builds the latest master on first launch. You can also install it ahead of time:
+
+```sh
+ros install victorzhuk/sextant
+```
+
+Make sure `~/.roswell/bin` is on your PATH.
 
 ## Installation
 
@@ -37,20 +43,14 @@ Common Lisp language support for Zed with syntax highlighting, LSP integration v
 
 ### Custom Binary Path
 
-Install `cl-lsp` with Roswell:
-
-```sh
-$ ros install qlot lem-project/lem lem-project/micros lem-project/lem-mailbox cxxxr/cl-lsp
-```
-
-If cl-lsp is installed in a non-standard location, you can specify the path in your Zed settings:
+If sextant is installed in a non-standard location, you can specify the path in your Zed settings:
 
 ```json
 {
   "lsp": {
-    "cl-lsp": {
+    "sextant": {
       "binary": {
-        "path": "/path/to/cl-lsp"
+        "path": "/path/to/sextant"
       }
     }
   }
@@ -64,7 +64,7 @@ Pass additional arguments to the language server:
 ```json
 {
   "lsp": {
-    "cl-lsp": {
+    "sextant": {
       "binary": {
         "arguments": ["--port", "8080"]
       }
@@ -80,7 +80,7 @@ Pass initialization options to the language server:
 ```json
 {
   "lsp": {
-    "cl-lsp": {
+    "sextant": {
       "initialization_options": {
         "some-option": "value"
       }
@@ -96,7 +96,7 @@ Configure workspace-specific settings:
 ```json
 {
   "lsp": {
-    "cl-lsp": {
+    "sextant": {
       "settings": {
         "workspace-setting": "value"
       }
@@ -137,6 +137,7 @@ Configure workspace-specific settings:
 │       ├── indents.scm      # Indentation rules
 │       ├── outline.scm      # Outline panel queries
 │       ├── textobjects.scm  # Text object queries
+│       ├── overrides.scm    # Scope overrides (string/comment)
 │       └── injections.scm   # Language injection queries
 └── LICENSE
 ```
@@ -146,15 +147,15 @@ Configure workspace-specific settings:
 The extension is built as a WebAssembly module using the Zed extension API:
 
 - **`zed_extension_api`** — Provides the `Extension` trait that the extension implements to handle language server lifecycle and configuration
-- **Language server resolution** — The extension searches for cl-lsp in this order:
+- **Language server resolution** — The extension searches for sextant in this order:
   1. User-configured path from Zed settings (with optional args/env)
   2. Binary on system PATH (with optional args/env)
-  3. Roswell installation (`ros install cxxxr/cl-lsp`, then PATH lookup)
+  3. Roswell build of the latest master (`ros install victorzhuk/sextant`), then PATH lookup
 - **Tree-sitter grammar** — Uses [tree-sitter-commonlisp](https://github.com/tree-sitter-grammars/tree-sitter-commonlisp) for parsing Common Lisp syntax
 
 ## Links
 
-- [cl-lsp](https://github.com/cxxxr/cl-lsp) — Common Lisp Language Server Protocol implementation
+- [sextant](https://github.com/victorzhuk/sextant) — Common Lisp Language Server Protocol implementation
 - [tree-sitter-commonlisp](https://github.com/tree-sitter-grammars/tree-sitter-commonlisp) — Tree-sitter grammar for Common Lisp
 - [Roswell](https://github.com/roswell/roswell) — Common Lisp environment setup utility
 

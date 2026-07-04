@@ -2,7 +2,7 @@
 
 ### Requirement: GitHub Actions workflow definition
 
-The repository SHALL define a GitHub Actions workflow at `.github/workflows/ci.yml` that runs for pull requests, pushes to the main branch, and version tag pushes matching `v*`.
+The repository SHALL define a GitHub Actions workflow at `.github/workflows/ci.yml` that runs for pull requests, pushes to the default branch (`master`), and version tag pushes matching `v*`.
 
 #### Scenario: Pull request opens
 - **WHEN** a pull request targets the repository
@@ -48,6 +48,6 @@ For `v*` tag pushes, the workflow SHALL publish a GitHub Release artifact after 
 
 The workflow SHALL grant write access to repository contents only for the release publishing job. CI-only jobs MUST run without release publishing permissions.
 
-#### Scenario: Main branch push runs CI
-- **WHEN** a non-tag push to the main branch runs the workflow
+#### Scenario: Default branch push runs CI
+- **WHEN** a non-tag push to the default branch runs the workflow
 - **THEN** the workflow does not request release publishing permissions for the CI job

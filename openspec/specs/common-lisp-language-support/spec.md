@@ -20,7 +20,7 @@ The extension SHALL register a `Common Lisp` language in Zed via `languages/comm
 
 ### Requirement: Comment syntax configuration
 
-The language config SHALL define `line_comments = ["; "]` and `block_comment = ["#|", "|#"]` so that Zed's toggle-comment commands produce idiomatic Common Lisp comments.
+The language config SHALL define `line_comments` with `"; "` as the first entry (used by toggle-comment) plus `";; "` and `";;; "` continuation prefixes, and `block_comment = ["#|", "|#"]`, so that Zed's comment commands produce idiomatic Common Lisp comments.
 
 #### Scenario: Toggling a line comment
 
@@ -34,7 +34,7 @@ The language config SHALL define `line_comments = ["; "]` and `block_comment = [
 
 ### Requirement: Bracket pairs and autoclose
 
-The language config SHALL define bracket pairs for `()`, `""`, and `|` (symbol escape). Parentheses MUST be configured with `close = true` and `newline = true`. The `autoclose_before` string SHALL include `;:.,=}])>"`.
+The language config SHALL define bracket pairs for `()`, `""`, and `|` (symbol escape). Parentheses MUST be configured with `close = true` and `newline = true`. The `"` and `|` pairs MUST NOT auto-close inside `comment` and `string` scopes (via `not_in` and an `overrides.scm` defining those scopes). The `autoclose_before` string SHALL include `;:.,=}])>"`.
 
 #### Scenario: Typing an opening parenthesis
 
@@ -82,7 +82,7 @@ The extension SHALL provide an `outline.scm` that captures top-level definition 
 The extension SHALL provide a `textobjects.scm` that captures list forms and function/macro definitions as text objects for structural selection commands. The query SHALL use the following capture names per current Zed conventions:
 
 - `@function.around` for entire function/macro definitions
-- `@function.inside` for function bodies (the lambda list and body within the definition)
+- `@function.inside` for function bodies (the body forms of the definition, excluding the header)
 - `@class.around` for entire list forms
 - `@class.inside` for list form contents
 
@@ -94,7 +94,7 @@ The extension SHALL provide a `textobjects.scm` that captures list forms and fun
 #### Scenario: Selecting a function body as a text object
 
 - **WHEN** a user invokes "select inside text object" inside a `defun` form
-- **THEN** the lambda list and body are selected via `@function.inside`
+- **THEN** the body forms are selected via `@function.inside`
 
 ### Requirement: Comment injection query file
 
@@ -113,3 +113,12 @@ The language config SHALL set `tab_size = 2` and `hard_tabs = false` to match Co
 
 - **WHEN** a user opens a Common Lisp file without workspace-specific settings
 - **THEN** indentation uses 2 spaces per level
+
+### Requirement: Symbol word characters
+
+The language config SHALL declare `word_characters` and `completion_query_characters` including `-`, `*`, `+`, `!`, `?`, `<`, `>`, and `=` so that Common Lisp symbols behave as single words.
+
+#### Scenario: Selecting a hyphenated symbol
+
+- **WHEN** a user double-clicks on `foo-bar` or `*special*`
+- **THEN** the whole symbol is selected as one word

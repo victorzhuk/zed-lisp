@@ -1,3 +1,14 @@
+## 0.3.0 (2026-07-04)
+
+- Fix outline panel missing `defun`/`defmacro`/`defgeneric`/`defmethod` definitions
+- Fix "select inside function" to select the body instead of the argument list
+- Fix CI to run on pushes to `master`
+- Add Lisp-aware word selection and completion for symbols like `foo-bar`, `*special*`
+- Add highlighting for definition names, call-position symbols, and more special forms
+- Add comment continuation for `;;` and `;;;` prefixes
+- Stop `"` and `|` auto-closing inside strings and comments
+- Switch the language server from cl-lsp to [sextant](https://github.com/victorzhuk/sextant); the extension resolves it from `PATH`, then builds the latest master via `ros install victorzhuk/sextant` when Roswell is available
+
 ## 0.2.0 (2025-05-22)
 
 - Add GitHub Actions CI workflow (fmt, clippy, test, wasm build)

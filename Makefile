@@ -18,7 +18,7 @@ fmt:
 	cargo fmt
 
 lint:
-	cargo clippy --target $(WASM_TARGET)
+	cargo clippy --target $(WASM_TARGET) -- -D warnings
 
 test:
 	cargo test

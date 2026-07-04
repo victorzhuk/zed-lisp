@@ -39,9 +39,9 @@ impl zed::Extension for CommonLispExtension {
             });
         }
 
-        if let Some(cl_lsp_path) = worktree.which("cl-lsp") {
+        if let Some(sextant_path) = worktree.which("sextant") {
             return Ok(zed::Command {
-                command: cl_lsp_path,
+                command: sextant_path,
                 args,
                 env,
             });
@@ -54,32 +54,32 @@ impl zed::Extension for CommonLispExtension {
             );
 
             let output = zed::process::Command::new(ros_path)
-                .args(["install", "cxxxr/cl-lsp"])
+                .args(["install", "victorzhuk/sextant"])
                 .output();
 
             match output {
                 Ok(output) if output.status == Some(0) => {
-                    if let Some(cl_lsp_path) = worktree.which("cl-lsp") {
+                    if let Some(sextant_path) = worktree.which("sextant") {
                         set_language_server_installation_status(
                             language_server_id,
                             &LanguageServerInstallationStatus::None,
                         );
                         return Ok(zed::Command {
-                            command: cl_lsp_path,
+                            command: sextant_path,
                             args,
                             env,
                         });
                     }
-                    return Err(
-                        "cl-lsp installed via Roswell but not found on PATH. Add ~/.roswell/bin to PATH.".into()
-                    );
+                    return Err("sextant built via Roswell but not found on PATH. \
+                                Add ~/.roswell/bin to PATH."
+                        .into());
                 }
                 Ok(output) => {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     let msg = if stderr.trim().is_empty() {
-                        "ros install exited with non-zero status".to_string()
+                        "ros install victorzhuk/sextant exited with a non-zero status".to_string()
                     } else {
-                        stderr.to_string()
+                        stderr.into_owned()
                     };
                     set_language_server_installation_status(
                         language_server_id,
@@ -90,7 +90,7 @@ impl zed::Extension for CommonLispExtension {
                     set_language_server_installation_status(
                         language_server_id,
                         &LanguageServerInstallationStatus::Failed(format!(
-                            "install cl-lsp via roswell: {}",
+                            "build sextant via Roswell: {}",
                             err
                         )),
                     );
@@ -99,10 +99,12 @@ impl zed::Extension for CommonLispExtension {
         }
 
         Err(
-            "cl-lsp not found. Please either:\n\
-             1. Install cl-lsp manually and ensure it's on your PATH, or\n\
-             2. Install Roswell (ros) and let the extension install cl-lsp automatically, or\n\
-             3. Configure the path in your Zed settings: {\"lsp\": {\"cl-lsp\": {\"binary\": {\"path\": \"/path/to/cl-lsp\"}}}}}".into()
+            "sextant not found on PATH and Roswell (ros) is unavailable to build it. \
+             Install Roswell, then run:\n\
+             ros install victorzhuk/sextant\n\
+             and add ~/.roswell/bin to PATH, or set the binary path in Zed settings:\n\
+             {\"lsp\": {\"sextant\": {\"binary\": {\"path\": \"/path/to/sextant\"}}}}"
+                .into(),
         )
     }
 
