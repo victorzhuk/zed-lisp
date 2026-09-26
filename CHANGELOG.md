@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.0 (2026-09-26)
 
 - Add opt-in `Lispico Clojure` and `Lispico CL` language modes for go-lispico dialects, with dialect-correct highlighting, brackets, indentation, outline, and text objects. Neither mode claims global file suffixes; ordinary `Common Lisp` associations and sextant behavior are unchanged
 - Register the `lispico` language server for the Lispico modes: configured binary path, then `lispico-lsp` on `PATH`, then one actionable error — no download, build, Roswell, or sextant fallback. Unknown server IDs never fall through to sextant
