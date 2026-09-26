@@ -17,20 +17,33 @@ fn corpus_dir() -> PathBuf {
     project_root().join("tests/corpus")
 }
 
+fn lisp_sources(dir: &std::path::Path, label: &str) -> Vec<PathBuf> {
+    let entries = std::fs::read_dir(dir)
+        .unwrap_or_else(|err| panic!("corpus directory {label} is missing: {err}"));
+    let mut sources = Vec::new();
+    for entry in entries {
+        let entry = entry.unwrap_or_else(|err| panic!("reading corpus directory {label}: {err}"));
+        let path = entry.path();
+        if path
+            .extension()
+            .is_none_or(|ext| ext != "lisp" && ext != "clj")
+        {
+            continue;
+        }
+        sources.push(path);
+    }
+    assert!(
+        !sources.is_empty(),
+        "{label}: no corpus fixtures found; an empty corpus silently validates nothing"
+    );
+    sources
+}
+
 #[test]
 fn complete_corpus_parses_without_errors() {
     for (dir, language) in CORPUS_GRAMMARS {
-        let entries = std::fs::read_dir(corpus_dir().join(dir))
-            .unwrap_or_else(|err| panic!("corpus directory {dir} is missing: {err}"));
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path
-                .extension()
-                .is_none_or(|ext| ext != "lisp" && ext != "clj")
-            {
-                continue;
-            }
+        let dir = corpus_dir().join(dir);
+        for path in lisp_sources(&dir, dir.file_name().unwrap().to_str().unwrap()) {
             let source = std::fs::read_to_string(&path).unwrap();
             let label = path
                 .strip_prefix(project_root())
@@ -46,18 +59,7 @@ fn complete_corpus_parses_without_errors() {
 fn incomplete_corpus_recovers_without_hanging() {
     for (dir, language) in CORPUS_GRAMMARS {
         let incomplete = corpus_dir().join(dir).join("incomplete");
-        let Ok(entries) = std::fs::read_dir(&incomplete) else {
-            panic!("missing recovery fixtures for {dir}");
-        };
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path
-                .extension()
-                .is_none_or(|ext| ext != "lisp" && ext != "clj")
-            {
-                continue;
-            }
+        for path in lisp_sources(&incomplete, &format!("{dir}/incomplete")) {
             let source = std::fs::read_to_string(&path).unwrap();
             let label = path
                 .strip_prefix(project_root())

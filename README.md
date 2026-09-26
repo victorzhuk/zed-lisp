@@ -43,7 +43,7 @@ Note: Yagel's existing `rules check` remains an independent host-side check; it 
 
 2. Build the extension:
    ```bash
-   cargo build --target wasm32-wasip2
+   cargo build --release --target wasm32-wasip2
    ```
 
 3. In Zed, open the command palette (Cmd/Ctrl + Shift + P)
@@ -176,7 +176,7 @@ Configure workspace-specific settings:
 
 2. Build the WebAssembly extension:
    ```bash
-   cargo build --target wasm32-wasip2
+   cargo build --release --target wasm32-wasip2
    ```
 
 3. Install as dev extension in Zed (see Installation section)

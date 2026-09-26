@@ -282,21 +282,92 @@ impl CommonLispExtension {
         }
     }
 
+    /// True when `path` is a regular file with at least one executable bit.
+    /// On platforms without POSIX permission bits (the wasm extension build)
+    /// a regular file counts as ready.
+    fn executable_file(path: &std::path::Path) -> bool {
+        if !path.is_file() {
+            return false;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::metadata(path).is_ok_and(|stat| stat.permissions().mode() & 0o111 != 0)
+        }
+        #[cfg(not(unix))]
+        {
+            true
+        }
+    }
+
+    /// Returns the newest previously downloaded sextant version directory,
+    /// if any, so a failed online lookup can fall back to the cache. Only
+    /// directories with an executable binary count.
+    fn latest_cached_sextant_dir(
+        entries: impl IntoIterator<Item = (String, bool)>,
+    ) -> Option<String> {
+        let parse = |version: &str| -> Vec<u64> {
+            version
+                .split('.')
+                .map(|part| part.parse().unwrap_or(0))
+                .collect()
+        };
+
+        entries
+            .into_iter()
+            .filter_map(|(name, has_binary)| {
+                let version = name.strip_prefix("sextant-")?;
+                has_binary.then(|| (parse(version), version.to_string()))
+            })
+            .max_by(|(a, _), (b, _)| a.cmp(b))
+            .map(|(_, version)| version)
+    }
+
+    fn cached_sextant_dir() -> Option<String> {
+        let entries = std::fs::read_dir(".").ok()?.flatten().map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let has_binary = Self::executable_file(&entry.path().join("sextant"));
+            (name, has_binary)
+        });
+        Self::latest_cached_sextant_dir(entries)
+    }
+
     fn download_sextant(
         &mut self,
         language_server_id: &LanguageServerId,
     ) -> zed::Result<Option<String>> {
         if let Some(path) = &self.cached_binary_path {
-            if std::fs::metadata(path).is_ok_and(|stat| stat.is_file()) {
+            if Self::executable_file(std::path::Path::new(path)) {
                 return Ok(Some(path.clone()));
             }
         }
 
+        // Check the latest release first so a running editor still picks up
+        // upgrades; the cached binary is only a fallback for when the lookup,
+        // the asset, the download, or the chmod fails.
+        if let Some(path) = self.download_latest_sextant(language_server_id) {
+            self.cached_binary_path = Some(path.clone());
+            return Ok(Some(path));
+        }
+
+        if let Some(version) = Self::cached_sextant_dir() {
+            let binary_path = format!("sextant-{version}/sextant");
+            self.cached_binary_path = Some(binary_path.clone());
+            return Ok(Some(binary_path));
+        }
+
+        Ok(None)
+    }
+
+    /// Attempts to resolve and download the newest GitHub release asset.
+    /// Returns `None` on any failure after reporting it; never leaves a
+    /// partial or non-executable file behind for the cache check to pick up.
+    fn download_latest_sextant(&mut self, language_server_id: &LanguageServerId) -> Option<String> {
         let asset_name = match zed::current_platform() {
             (zed::Os::Linux, zed::Architecture::X8664) => "sextant-linux-x64",
             (zed::Os::Linux, zed::Architecture::Aarch64) => "sextant-linux-arm64",
             (zed::Os::Mac, zed::Architecture::Aarch64) => "sextant-macos-arm64",
-            _ => return Ok(None),
+            _ => return None,
         };
 
         let release = match zed::latest_github_release(
@@ -307,17 +378,18 @@ impl CommonLispExtension {
             },
         ) {
             Ok(release) => release,
-            Err(_) => return Ok(None),
+            Err(_) => return None,
         };
 
-        let Some(asset) = release.assets.iter().find(|asset| asset.name == asset_name) else {
-            return Ok(None);
-        };
+        let asset = release
+            .assets
+            .iter()
+            .find(|asset| asset.name == asset_name)?;
 
         let version_dir = format!("sextant-{}", release.version);
         let binary_path = format!("{version_dir}/sextant");
 
-        if !std::fs::metadata(&binary_path).is_ok_and(|stat| stat.is_file()) {
+        if !Self::executable_file(std::path::Path::new(&binary_path)) {
             set_language_server_installation_status(
                 language_server_id,
                 &LanguageServerInstallationStatus::Downloading,
@@ -329,6 +401,9 @@ impl CommonLispExtension {
                 &binary_path,
                 zed::DownloadedFileType::Uncompressed,
             ) {
+                // A partial download must never be left where the cache
+                // reuse check would pick it up.
+                std::fs::remove_file(&binary_path).ok();
                 set_language_server_installation_status(
                     language_server_id,
                     &LanguageServerInstallationStatus::Failed(format!(
@@ -336,16 +411,19 @@ impl CommonLispExtension {
                         release.version
                     )),
                 );
-                return Ok(None);
+                return None;
             }
             if let Err(err) = zed::make_file_executable(&binary_path) {
+                // A downloaded-but-not-executable file must not survive to
+                // poison later cache hits.
+                std::fs::remove_file(&binary_path).ok();
                 set_language_server_installation_status(
                     language_server_id,
                     &LanguageServerInstallationStatus::Failed(format!(
                         "make sextant executable: {err}"
                     )),
                 );
-                return Ok(None);
+                return None;
             }
 
             if let Ok(entries) = std::fs::read_dir(".") {
@@ -363,8 +441,7 @@ impl CommonLispExtension {
             );
         }
 
-        self.cached_binary_path = Some(binary_path.clone());
-        Ok(Some(binary_path))
+        Some(binary_path)
     }
 }
 

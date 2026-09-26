@@ -63,6 +63,27 @@
       "required": ["source_revision"]
     }
   ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "dialect": { "const": "clojure" }
+        }
+      },
+      "then": {
+        "properties": {
+          "entries": {
+            "items": {
+              "properties": {
+                "cell": { "const": "value" }
+              }
+            }
+          }
+        }
+      },
+      "description": "Lisp-1 (clojure) dialects resolve every symbol through the value cell only."
+    }
+  ],
   "definitions": {
     "entry": {
       "type": "object",
@@ -104,7 +125,7 @@
             "max": {
               "type": ["integer", "null"],
               "minimum": 0,
-              "description": "Maximum accepted argument count; null means a verified rest parameter with no fixed upper bound."
+              "description": "Maximum accepted argument count; null means a verified rest parameter with no fixed upper bound. Must not be smaller than min (JSON Schema draft-07 cannot compare sibling numbers; enforce out of band)."
             },
             "rest": {
               "type": "boolean",
@@ -148,7 +169,20 @@
             }
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": { "const": "value" }
+            }
+          },
+          "then": {
+            "not": { "required": ["arity"] },
+            "description": "Value entries carry no signature, so arity must stay absent."
+          }
+        }
+      ]
     }
   }
 }

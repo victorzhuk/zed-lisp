@@ -4,6 +4,14 @@
 Fails when the extension manifest references a resource that is missing, or
 when a shipped resource is malformed, so a broken package is caught before
 publication. Run directly or via `make check-package`.
+
+Archive contract: the release tarball is a Zed extension package containing
+extension.toml, languages/, snippets/, schemas/, examples/, README.md,
+LICENSE and the compiled wasm only. grammars/ and .gitmodules are
+checkout-only: Zed clones and compiles grammars itself from the
+repository/commit pins in extension.toml, so the validator's grammar checks
+apply to the working tree, never to the archive. The CI release job enforces
+this same contract on the built tarball before upload.
 """
 
 import json
@@ -42,6 +50,17 @@ def main() -> None:
         manifest = tomllib.loads((ROOT / "extension.toml").read_text())
     except tomllib.TOMLDecodeError as err:
         fail(f"extension.toml does not parse: {err}")
+
+    cargo_version = ""
+    for line in (ROOT / "Cargo.toml").read_text().splitlines():
+        if line.startswith("version = "):
+            cargo_version = line.split('"')[1]
+            break
+    if manifest.get("version") != cargo_version:
+        fail(
+            f"extension.toml version {manifest.get('version')!r} != "
+            f"Cargo.toml version {cargo_version!r}"
+        )
 
     for name, entry in manifest.get("grammars", {}).items():
         for key in ("repository", "commit"):

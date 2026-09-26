@@ -297,6 +297,78 @@ fn shipped_catalog_schema_compiles() {
 }
 
 #[test]
+fn catalog_schema_rejects_invalid_entries_and_provenance() {
+    let schema = read_json(project_root().join("schemas/lispico-catalog.schema.json"));
+    let schema = jsonschema::validator_for(&schema).expect("catalog schema must compile");
+
+    let valid: Value = serde_json::from_str(
+        r#"{
+        "schema_version": 1,
+        "owner": "go-lispico",
+        "source_version": "0.3.0",
+        "dialect": "clojure",
+        "library": "core",
+        "entries": [
+            { "name": "map", "kind": "function", "cell": "value" },
+            { "name": "pi", "kind": "value", "cell": "value" }
+        ]
+    }"#,
+    )
+    .unwrap();
+    assert!(schema.is_valid(&valid), "minimal valid catalog is rejected");
+
+    let mut value_with_arity = valid.clone();
+    value_with_arity["entries"][1]["arity"] = serde_json::json!({ "min": 0 });
+    assert!(
+        !schema.is_valid(&value_with_arity),
+        "value entries must not declare arity"
+    );
+
+    let mut clojure_function_cell = valid.clone();
+    clojure_function_cell["entries"][0]["cell"] = Value::from("function");
+    assert!(
+        !schema.is_valid(&clojure_function_cell),
+        "clojure catalogs must resolve every symbol through the value cell"
+    );
+
+    let mut cl_function_cell = valid.clone();
+    cl_function_cell["dialect"] = Value::from("cl");
+    cl_function_cell["entries"][0]["cell"] = Value::from("function");
+    assert!(
+        schema.is_valid(&cl_function_cell),
+        "cl (Lisp-2) catalogs may declare function-cell entries"
+    );
+
+    let mut no_provenance = valid.clone();
+    no_provenance
+        .as_object_mut()
+        .unwrap()
+        .remove("source_version");
+    assert!(
+        !schema.is_valid(&no_provenance),
+        "catalogs must pin a source version or revision"
+    );
+
+    let mut both_provenance = valid.clone();
+    both_provenance["source_revision"] = Value::from("f9ce4a1");
+    assert!(
+        !schema.is_valid(&both_provenance),
+        "exactly one of source_version and source_revision is allowed"
+    );
+
+    let mut unknown_field = valid.clone();
+    unknown_field["entries"][0]["signature"] = Value::from("(map f coll)");
+    assert!(
+        !schema.is_valid(&unknown_field),
+        "invented signature fields must be rejected"
+    );
+
+    let mut empty_entries = valid.clone();
+    empty_entries["entries"] = Value::from(Vec::<Value>::new());
+    assert!(!schema.is_valid(&empty_entries));
+}
+
+#[test]
 fn project_schema_rejects_unknown_and_invalid_configuration() {
     let schema = read_json(project_root().join("schemas/lispico-project.schema.json"));
     let schema = jsonschema::validator_for(&schema).unwrap();
@@ -532,15 +604,15 @@ fn template_file_types_select_the_documented_modes() {
 #[test]
 fn template_source_fixtures_parse_in_their_selected_mode() {
     let clojure = clojure_language();
-    let commonlisp = commonlisp_language();
 
     // The go-lispico template's CL corpus fixture must parse in the mode its
-    // template selects for it (Lispico CL).
+    // template selects for it (Lispico CL, which is backed by the clojure
+    // grammar).
     let source =
         std::fs::read_to_string(project_root().join("examples/go-lispico/corpus/examples.lisp"))
             .unwrap();
     parse(
-        &commonlisp,
+        &clojure,
         &source,
         true,
         "examples/go-lispico/corpus/examples.lisp",

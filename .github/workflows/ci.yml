@@ -40,13 +40,28 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
+      - name: Verify tag matches package versions
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version_toml=$(sed -n 's/^version = "\(.*\)"/\1/p' extension.toml)
+          cargo_version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml)
+          if [ "$TAG" != "v$version_toml" ] || [ "$version_toml" != "$cargo_version" ]; then
+            echo "tag $TAG does not match extension.toml $version_toml / Cargo.toml $cargo_version" >&2
+            exit 1
+          fi
       - uses: actions/download-artifact@v8
         with:
           name: wasm-build
           path: wasm-build
-      - run: |
+      - name: Build release archive
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
           mv wasm-build/zed_common_lisp.wasm .
-          tar czf zed-common-lisp-${{ github.ref_name }}.tar.gz \
+          tar czf "zed-common-lisp-${TAG}.tar.gz" \
             extension.toml \
             languages/ \
             snippets/ \
@@ -55,12 +70,35 @@ jobs:
             README.md \
             LICENSE \
             zed_common_lisp.wasm
-      - run: |
-          gh release create ${{ github.ref_name }} \
-            --title ${{ github.ref_name }} \
-            --generate-notes || true
-          gh release upload ${{ github.ref_name }} \
-            zed-common-lisp-${{ github.ref_name }}.tar.gz \
-            --clobber
+      # Archive contract (see scripts/check_package.py): a Zed extension
+      # package ships the manifest, resources and compiled wasm; grammars/
+      # and .gitmodules stay checkout-only because Zed clones and compiles
+      # grammars from the pins in extension.toml.
+      - name: Validate release archive
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          archive="zed-common-lisp-${TAG}.tar.gz"
+          members=$(tar -tzf "$archive")
+          for required in extension.toml languages snippets schemas examples README.md LICENSE zed_common_lisp.wasm; do
+            if ! grep -qx -e "$required" -e "$required/" <<<"$members"; then
+              echo "$archive is missing $required" >&2
+              exit 1
+            fi
+          done
+          if grep -q -e '^grammars/' -e '^\.gitmodules$' <<<"$members"; then
+            echo "$archive must not ship grammars/ or .gitmodules" >&2
+            exit 1
+          fi
+      - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes || true
+          gh release upload "$TAG" \
+            "zed-common-lisp-${TAG}.tar.gz" \
+            --clobber

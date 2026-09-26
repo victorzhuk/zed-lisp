@@ -1,3 +1,11 @@
+## Unreleased
+
+## 0.5.2 (2026-09-26)
+
+- Fix sextant server resolution to reuse a previously downloaded binary when the network is unavailable, and remove partial or non-executable downloads so they cannot poison later cache lookups
+- Reject release archives whose tag does not match the bundled extension/Cargo versions, and validate that the archive contains only the documented extension resources (manifest, languages, snippets, schemas, examples, README, LICENSE, wasm)
+- Tighten the Lispico catalog schema: reject Clojure entries whose `cell` is not `value` and reject value entries that also declare an arity
+
 ## 0.5.1 (2026-09-26)
 
 - Fix dev-extension install failing with `data did not match any variant of untagged enum ExtensionSnippets`: `snippets` is now a top-level list of files named after each language's snippet scope (`lispico clojure.json`, `lispico cl.json`), so the snippets also reach their modes
@@ -9,7 +17,7 @@
 
 - Add opt-in `Lispico Clojure` and `Lispico CL` language modes for go-lispico dialects, with dialect-correct highlighting, brackets, indentation, outline, and text objects. Neither mode claims global file suffixes; ordinary `Common Lisp` associations and sextant behavior are unchanged
 - Register the `lispico` language server for the Lispico modes: configured binary path, then `lispico-lsp` on `PATH`, then one actionable error — no download, build, Roswell, or sextant fallback. Unknown server IDs never fall through to sextant
-- Add language-scoped snippets for both Lispico modes (valid list/vector parameter and binding conventions, `&` rest syntax)
+- Add language-scoped snippets for both Lispico modes (valid list/vector parameter and binding conventions)
 - Add `.lispico.json` project and declaration-catalog JSON schemas plus tested configuration templates for zhk, Yagel, and go-lispico under `examples/`, with opt-in host-specific snippet examples
 - Pin the grammars as submodules (tree-sitter-commonlisp `3232350`, tree-sitter-clojure `e43eff8`) and add a corpus/query verification harness: fixtures from the three target projects plus Common Lisp regressions parse against the pinned grammars, every shipped query compiles, templates and schemas validate, and packaged resources are checked in CI
 - Bound test verification: `make test` runs the tests with a 300s wall limit, four build jobs, and four test threads; CI uses the same wrapper and packages the new snippet, schema, and example resources in releases
