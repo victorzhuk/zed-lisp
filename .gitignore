@@ -24,4 +24,9 @@ target
 /.opencode/
 Cargo.lock
 
+# The user-global gitignore excludes `.zed/` at every depth; re-include the
+# shipped template directories so they reach the package and CI checkout.
+!examples/*/.zed/
+!examples/*/.zed/**
+
 *.wasm

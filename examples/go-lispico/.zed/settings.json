@@ -1,0 +1,21 @@
+{
+  "file_types": {
+    "Lispico Clojure": ["internal/goldset/testdata/**/*.lisp"],
+    "Lispico CL": ["corpus/**/*.lisp"]
+  },
+  "languages": {
+    "Lispico Clojure": {
+      "language_servers": ["lispico"]
+    },
+    "Lispico CL": {
+      "language_servers": ["lispico"]
+    }
+  },
+  "lsp": {
+    "lispico": {
+      "initialization_options": {
+        "project_file": ".lispico.json"
+      }
+    }
+  }
+}
