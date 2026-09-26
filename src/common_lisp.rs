@@ -5,6 +5,60 @@ use zed_extension_api::{
     LanguageServerId, LanguageServerInstallationStatus, Worktree,
 };
 
+const LISPICO_SERVER_BINARY: &str = "lispico-lsp";
+
+/// Chooses the server command for a language server id. The Lispico and
+/// sextant servers are fully independent: an unknown id never falls through
+/// to sextant, and the Lispico path never reaches sextant's download or
+/// Roswell fallback.
+fn dispatch_language_server(id: &str) -> Result<ServerKind, String> {
+    match id {
+        "lispico" => Ok(ServerKind::Lispico),
+        "sextant" => Ok(ServerKind::Sextant),
+        other => Err(format!(
+            "unknown language server id: {other}. \
+             This extension only provides the 'sextant' and 'lispico' servers."
+        )),
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum ServerKind {
+    Lispico,
+    Sextant,
+}
+
+/// Resolves the Lispico server command: configured binary path first, then
+/// `lispico-lsp` on PATH. There is no download, build, Roswell, or sextant
+/// fallback: a missing server leaves the structural (Tree-sitter) features in
+/// place and reports one actionable error. Configured arguments and
+/// environment apply to both resolution paths.
+fn resolve_lispico_command(
+    configured: Option<zed::Command>,
+    args: Vec<String>,
+    env: Vec<(String, String)>,
+    which: impl Fn(&str) -> Option<String>,
+) -> Result<zed::Command, String> {
+    if let Some(command) = configured {
+        return Ok(command);
+    }
+
+    if let Some(path) = which(LISPICO_SERVER_BINARY) {
+        return Ok(zed::Command {
+            command: path,
+            args,
+            env,
+        });
+    }
+
+    Err(format!(
+        "{LISPICO_SERVER_BINARY} not found. Install go-lispico and put {LISPICO_SERVER_BINARY} \
+         on your PATH, or set the binary path in Zed settings:\n\
+         {{\"lsp\": {{\"lispico\": {{\"binary\": {{\"path\": \"/path/to/{LISPICO_SERVER_BINARY}\"}}}}}}}}\n\
+         Structural highlighting remains available without the server."
+    ))
+}
+
 struct CommonLispExtension {
     cached_binary_path: Option<String>,
 }
@@ -17,6 +71,101 @@ impl zed::Extension for CommonLispExtension {
     }
 
     fn language_server_command(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &Worktree,
+    ) -> zed::Result<zed::Command> {
+        match dispatch_language_server(language_server_id.as_ref())? {
+            ServerKind::Lispico => self.lispico_command(language_server_id, worktree),
+            ServerKind::Sextant => self.sextant_command(language_server_id, worktree),
+        }
+    }
+
+    fn language_server_initialization_options(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &Worktree,
+    ) -> zed::Result<Option<zed::serde_json::Value>> {
+        let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
+        Ok(lsp_settings.initialization_options)
+    }
+
+    fn language_server_workspace_configuration(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &Worktree,
+    ) -> zed::Result<Option<zed::serde_json::Value>> {
+        let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
+        Ok(lsp_settings.settings)
+    }
+
+    fn label_for_completion(
+        &self,
+        language_server_id: &LanguageServerId,
+        completion: Completion,
+    ) -> Option<CodeLabel> {
+        // The Lispico server formats its own completion labels; only sextant's
+        // label/detail shape is rendered here.
+        if language_server_id.as_ref() != "sextant" {
+            return None;
+        }
+
+        let kind = completion.kind?;
+
+        match kind {
+            CompletionKind::Function | CompletionKind::Method => {
+                let label = completion.label;
+                let detail = completion.detail.as_ref()?;
+                let code = format!("{} {}", label, detail);
+
+                Some(CodeLabel {
+                    code,
+                    spans: vec![
+                        CodeLabelSpan::literal(label.clone(), Some("function".to_string())),
+                        CodeLabelSpan::literal(format!(" {}", detail), None),
+                    ],
+                    filter_range: (0..label.len()).into(),
+                })
+            }
+            _ => None,
+        }
+    }
+}
+
+impl CommonLispExtension {
+    /// Launches the native Lispico language server with configured
+    /// arguments, environment, and pass-through settings.
+    fn lispico_command(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &Worktree,
+    ) -> zed::Result<zed::Command> {
+        let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
+
+        let args = lsp_settings
+            .binary
+            .as_ref()
+            .and_then(|b| b.arguments.clone())
+            .unwrap_or_default();
+        let env: Vec<(String, String)> = lsp_settings
+            .binary
+            .as_ref()
+            .and_then(|b| b.env.clone())
+            .map(|h| h.into_iter().collect())
+            .unwrap_or_default();
+        let configured = lsp_settings
+            .binary
+            .and_then(|b| b.path)
+            .map(|path| zed::Command {
+                command: path,
+                args: args.clone(),
+                env: env.clone(),
+            });
+
+        resolve_lispico_command(configured, args, env, |name| worktree.which(name))
+    }
+
+    fn sextant_command(
         &mut self,
         language_server_id: &LanguageServerId,
         worktree: &Worktree,
@@ -120,52 +269,6 @@ impl zed::Extension for CommonLispExtension {
         )
     }
 
-    fn language_server_initialization_options(
-        &mut self,
-        language_server_id: &LanguageServerId,
-        worktree: &Worktree,
-    ) -> zed::Result<Option<zed::serde_json::Value>> {
-        let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
-        Ok(lsp_settings.initialization_options)
-    }
-
-    fn language_server_workspace_configuration(
-        &mut self,
-        language_server_id: &LanguageServerId,
-        worktree: &Worktree,
-    ) -> zed::Result<Option<zed::serde_json::Value>> {
-        let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
-        Ok(lsp_settings.settings)
-    }
-
-    fn label_for_completion(
-        &self,
-        _language_server_id: &LanguageServerId,
-        completion: Completion,
-    ) -> Option<CodeLabel> {
-        let kind = completion.kind?;
-
-        match kind {
-            CompletionKind::Function | CompletionKind::Method => {
-                let label = completion.label;
-                let detail = completion.detail.as_ref()?;
-                let code = format!("{} {}", label, detail);
-
-                Some(CodeLabel {
-                    code,
-                    spans: vec![
-                        CodeLabelSpan::literal(label.clone(), Some("function".to_string())),
-                        CodeLabelSpan::literal(format!(" {}", detail), None),
-                    ],
-                    filter_range: (0..label.len()).into(),
-                })
-            }
-            _ => None,
-        }
-    }
-}
-
-impl CommonLispExtension {
     fn download_sextant(
         &mut self,
         language_server_id: &LanguageServerId,
@@ -233,5 +336,20 @@ impl CommonLispExtension {
         Ok(Some(binary_path))
     }
 }
+
+/// Raw grammar entry points for the Rust test harness. The parser objects are
+/// compiled from the pinned grammar submodules by `build.rs` and linked
+/// through this crate's rlib target; the wasm extension build never
+/// references them.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod testing {
+    extern "C" {
+        pub fn tree_sitter_commonlisp() -> *const ();
+        pub fn tree_sitter_clojure() -> *const ();
+    }
+}
+
+#[cfg(test)]
+mod tests;
 
 zed::register_extension!(CommonLispExtension);

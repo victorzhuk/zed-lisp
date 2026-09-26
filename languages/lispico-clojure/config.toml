@@ -1,0 +1,16 @@
+name = "Lispico Clojure"
+grammar = "clojure"
+line_comments = ["; ", ";; ", ";;; "]
+autoclose_before = ";:.,=}])>\"`'"
+tab_size = 2
+hard_tabs = false
+word_characters = ["-", "*", "+", "!", "?", "<", ">", "=", ".", "/", ":", "&", "_"]
+completion_query_characters = ["-", "*", "+", "!", "?", "<", ">", "=", ".", "/", ":", "&", "_"]
+collapsed_placeholder = "..."
+
+brackets = [
+    { start = "(", end = ")", close = true, newline = true },
+    { start = "[", end = "]", close = true, newline = true },
+    { start = "{", end = "}", close = true, newline = true },
+    { start = "\"", end = "\"", close = true, newline = false, not_in = ["comment", "string"] },
+]

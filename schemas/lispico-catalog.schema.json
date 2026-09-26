@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/victorzhuk/zed-lisp/master/schemas/lispico-catalog.schema.json",
+  "title": "Lispico declaration catalog",
+  "description": "Version-1 inert declaration catalog for Go-defined Lispico symbols. Catalogs are non-executable data: they describe host and library symbols with verified facts only. Unknown signature or type information must remain absent — never replace it with invented varargs. Actual Lisp source remains the authority for its own definitions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "owner", "dialect", "library", "entries"],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Supported catalog schema version."
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Owning project or module, for example \"go-lispico\", \"zhk\", or \"yagel\"."
+    },
+    "source_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact release version the entries were verified against. Exactly one of source_version and source_revision is required."
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact source revision the entries were verified against. Exactly one of source_version and source_revision is required."
+    },
+    "source_fingerprint": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Content fingerprint of the verified source snapshot, so dirty development trees are not labeled as an unchanged release."
+    },
+    "dialect": {
+      "enum": ["cl", "clojure"],
+      "description": "Dialect the declarations apply to. Vocabulary aliases and CL adapter signatures differ between dialects."
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "enum": ["runtime", "zhk", "yagel-rule", "yagel-workflow"]
+      },
+      "description": "Host profiles the declarations apply to. Dynamic workflow helpers must only appear in catalogs usable by yagel-workflow contexts."
+    },
+    "library": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Library ID this catalog describes, for example \"core\", \"stdlib\", \"json\", \"zhk\", or \"yagel\"."
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/entry"
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "required": ["source_version"]
+    },
+    {
+      "required": ["source_revision"]
+    }
+  ],
+  "definitions": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind", "cell"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact symbol name as exposed by the runtime, including any namespace prefix such as \"zhk/read\"."
+        },
+        "kind": {
+          "enum": ["function", "macro", "value", "special-form"],
+          "description": "Symbol kind. Non-callable host bindings must use \"value\" and must not fabricate a signature."
+        },
+        "cell": {
+          "enum": ["value", "function"],
+          "description": "Namespace cell the symbol lives in. Lisp-1 (clojure) dialects resolve through the value cell only; Lisp-2 (cl) dialects honor both cells."
+        },
+        "doc": {
+          "type": "string",
+          "description": "Source-backed documentation."
+        },
+        "result": {
+          "type": "string",
+          "description": "Verified result or value information, when known."
+        },
+        "arity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min"],
+          "description": "Verified argument information. Absent when unknown; never guessed.",
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minimum accepted argument count."
+            },
+            "max": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "description": "Maximum accepted argument count; null means a verified rest parameter with no fixed upper bound."
+            },
+            "rest": {
+              "type": "boolean",
+              "description": "Whether a `&` rest argument is accepted."
+            },
+            "parameters": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Verified parameter labels, when known."
+            }
+          }
+        },
+        "phase": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Verified execution-phase availability, for example \"staging\", \"live\", or \"callback\". Absent when no phase boundary is proven."
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path"],
+          "description": "Where the verified fact came from. Without a host source path, editors fall back to this catalog location; they must not fabricate one.",
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Source file path relative to the owning repository root."
+            },
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "end_line": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

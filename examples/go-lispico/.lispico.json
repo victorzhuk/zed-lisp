@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "contexts": [
+    {
+      "name": "goldset-clojure",
+      "files": ["internal/goldset/testdata/**/*.lisp"],
+      "dialect": "clojure",
+      "profile": "runtime",
+      "libraries": ["stdlib", "json"],
+      "source_roots": ["internal/goldset/testdata"]
+    },
+    {
+      "name": "cl-corpus",
+      "files": ["corpus/**/*.lisp"],
+      "exclude": ["internal/**"],
+      "dialect": "cl",
+      "profile": "runtime",
+      "libraries": ["stdlib", "json"],
+      "source_roots": ["corpus"]
+    }
+  ]
+}

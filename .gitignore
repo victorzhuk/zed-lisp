@@ -16,13 +16,12 @@ target
 # Contains mutation testing data
 **/mutants.out*/
 
-.idea/
-.vscode/
-.zed/
-.cursor/
-.claude/
-.opencode/
+/.idea/
+/.vscode/
+/.zed/
+/.cursor/
+/.claude/
+/.opencode/
 Cargo.lock
 
 *.wasm
-grammars/commonlisp/

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "runtime_version": "0.14.0",
+  "catalogs": [
+    {
+      "path": "tools/lispico/yagel-catalog.json",
+      "owner": "yagel",
+      "expected_revision": "1f0a5757",
+      "source_root": "."
+    }
+  ],
+  "contexts": [
+    {
+      "name": "yagel-rules",
+      "files": ["rules/**/*.clj", "packs/**/*.clj"],
+      "dialect": "clojure",
+      "profile": "yagel-rule",
+      "libraries": ["stdlib", "json", "yagel"],
+      "source_roots": ["rules", "packs"],
+      "layers": [
+        { "kind": "embedded" },
+        { "kind": "packs", "root": "packs" },
+        { "kind": "project", "root": "rules" }
+      ]
+    }
+  ]
+}

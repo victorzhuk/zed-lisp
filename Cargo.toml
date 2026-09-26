@@ -1,14 +1,26 @@
 [package]
 name = "zed_common_lisp"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 
 [lib]
 path = "src/common_lisp.rs"
-crate-type = ["cdylib"]
+# The rlib target lets integration tests link the build-script parser
+# archives; Zed only consumes the cdylib output.
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 zed_extension_api = "0.7.0"
+
+[build-dependencies]
+cc = "1"
+
+[dev-dependencies]
+jsonschema = { version = "0.58", default-features = false }
+serde_json = "1"
+toml = "0.8"
+tree-sitter = "0.25"
+tree-sitter-language = "0.1"
 
 [profile.release]
 opt-level = "s"

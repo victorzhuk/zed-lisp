@@ -1,15 +1,27 @@
 id = "common-lisp"
 name = "Common Lisp"
-version = "0.4.0"
+version = "0.5.0"
 schema_version = 1
 authors = ["Victor Zhuk"]
-description = "Common Lisp language support for Zed"
+description = "Common Lisp and Lispico language support for Zed"
 repository = "https://github.com/victorzhuk/zed-lisp"
 
 [grammars.commonlisp]
 repository = "https://github.com/tree-sitter-grammars/tree-sitter-commonlisp"
 commit = "32323509b3d9fe96607d151c2da2c9009eb13a2f"
 
+[grammars.clojure]
+repository = "https://github.com/sogaiu/tree-sitter-clojure"
+commit = "e43eff80d17cf34852dcd92ca5e6986d23a7040f"
+
 [language_servers.sextant]
 name = "sextant"
 languages = ["Common Lisp"]
+
+[language_servers.lispico]
+name = "lispico"
+languages = ["Lispico Clojure", "Lispico CL"]
+
+[snippets]
+"Lispico Clojure" = "snippets/lispico-clojure"
+"Lispico CL" = "snippets/lispico-cl"

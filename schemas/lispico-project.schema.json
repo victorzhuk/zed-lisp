@@ -1,0 +1,264 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/victorzhuk/zed-lisp/master/schemas/lispico-project.schema.json",
+  "title": "Lispico project configuration",
+  "description": "Version-1 declarative configuration for the Lispico language server and checker. Place as `.lispico.json` at the worktree root, or select a different file with the server's `project_file` initialization option. All relative paths resolve from the containing file's directory. File globs use `/` as the separator, `*` within a path segment, and `**` across segments; excludes win over inclusions, and every executable source file must match exactly one context. The configuration is never executed and no ancestor or home-directory scan is performed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "contexts"],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Supported configuration schema version."
+    },
+    "runtime_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Expected go-lispico version (for example \"0.14.0\") or recorded source revision the analysis should match."
+    },
+    "catalogs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/catalog"
+      }
+    },
+    "contexts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/context"
+      }
+    }
+  },
+  "definitions": {
+    "glob": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Relative glob: `/` separator, `*` within a segment, `**` across segments."
+    },
+    "catalog": {
+      "type": "object",
+      "description": "A local declaration catalog with the expected provenance it must match. Missing or mismatched catalogs produce one actionable context diagnostic; the tooling never silently selects a newer catalog.",
+      "additionalProperties": false,
+      "required": ["path", "owner"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Catalog file path, relative to this configuration file."
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Owning project or module, for example \"zhk\" or \"yagel\"."
+        },
+        "expected_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Expected release version recorded in the catalog's source provenance."
+        },
+        "expected_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Expected source revision recorded in the catalog's source provenance."
+        },
+        "expected_fingerprint": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Additionally pins a development snapshot's source fingerprint."
+        },
+        "source_root": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional checkout used to verify the catalog's declared source-file fingerprints; without it the catalog is verified as catalog-only provenance."
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["expected_version"]
+        },
+        {
+          "required": ["expected_revision"]
+        }
+      ]
+    },
+    "context": {
+      "type": "object",
+      "description": "One executable-source context. Context `files` globs must not overlap another context's; overlap is a configuration error, not a priority rule. The selected language ID and `dialect` must agree.",
+      "additionalProperties": false,
+      "required": ["name", "files", "dialect", "profile"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/glob"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/glob"
+          }
+        },
+        "dialect": {
+          "enum": ["cl", "clojure"],
+          "description": "Lispico dialect of the context's sources: `cl` (Lisp-2, bracket literals disabled) or `clojure` (Lisp-1, bracket literals enabled)."
+        },
+        "profile": {
+          "enum": ["runtime", "zhk", "yagel-rule", "yagel-workflow"],
+          "description": "Host loading model applied to the context's sources."
+        },
+        "libraries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Enabled library IDs; locating a library on disk does not enable it."
+        },
+        "source_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Roots permitted for indexing; indexing never implies import or global visibility. Scans are bounded, symlinks are not followed, and external roots require these explicit paths."
+        },
+        "prelude": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/glob"
+          },
+          "description": "Ordered prelude globs evaluated before each sequential program (zhk profile only)."
+        },
+        "layers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/layer"
+          },
+          "description": "Ordered overlay layers; later entries shadow earlier ones by relative file identity (Yagel profiles only)."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "const": "zhk"
+              }
+            }
+          },
+          "then": {
+            "required": ["prelude"],
+            "not": {
+              "required": ["layers"]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "enum": ["yagel-rule", "yagel-workflow"]
+              }
+            }
+          },
+          "then": {
+            "required": ["layers"],
+            "not": {
+              "required": ["prelude"]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "const": "runtime"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["prelude"]
+                },
+                {
+                  "required": ["layers"]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "profile": {
+                "enum": ["zhk", "yagel-rule", "yagel-workflow"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "dialect": {
+                "const": "clojure"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "layer": {
+      "type": "object",
+      "description": "One Yagel overlay layer. `embedded` reads the runtime's embedded sources; the other kinds read `root`. Later layers shadow earlier ones; a winning unreadable or invalid file never falls back to a lower layer.",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["embedded", "packs", "global", "project"]
+        },
+        "root": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Layer source root, relative to this configuration file. Required for packs, global, and project; forbidden for embedded."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": ["packs", "global", "project"]
+              }
+            }
+          },
+          "then": {
+            "required": ["root"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "embedded"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": ["root"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

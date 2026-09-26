@@ -1,0 +1,10 @@
+{
+  "zhk-sh": {
+    "body": "(zhk/sh ${1:id} ${2:argv} ${3:opts})",
+    "description": "Run argv once per run and record it (zhk host primitive)"
+  },
+  "zhk-fact": {
+    "body": "(zhk/fact ${1:name})",
+    "description": "Read a run fact (zhk host primitive)"
+  }
+}
