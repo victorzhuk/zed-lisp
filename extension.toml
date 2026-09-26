@@ -5,6 +5,7 @@ schema_version = 1
 authors = ["Victor Zhuk"]
 description = "Common Lisp and Lispico language support for Zed"
 repository = "https://github.com/victorzhuk/zed-lisp"
+snippets = ["snippets/lispico clojure.json", "snippets/lispico cl.json"]
 
 [grammars.commonlisp]
 repository = "https://github.com/tree-sitter-grammars/tree-sitter-commonlisp"
@@ -21,7 +22,3 @@ languages = ["Common Lisp"]
 [language_servers.lispico]
 name = "lispico"
 languages = ["Lispico Clojure", "Lispico CL"]
-
-[snippets]
-"Lispico Clojure" = "snippets/lispico-clojure"
-"Lispico CL" = "snippets/lispico-cl"

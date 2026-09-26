@@ -7,6 +7,7 @@ publication. Run directly or via `make check-package`.
 """
 
 import json
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -31,6 +32,11 @@ def fail(message: str) -> None:
     sys.exit(1)
 
 
+def git(*args: str) -> str:
+    result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
 def main() -> None:
     try:
         manifest = tomllib.loads((ROOT / "extension.toml").read_text())
@@ -47,6 +53,14 @@ def main() -> None:
                 f"grammars/{name}/src/parser.c is missing; "
                 "run `git submodule update --init --recursive`"
             )
+        # Zed reuses grammars/<name> only when its origin equals the manifest
+        # repository verbatim; a `.git` suffix makes the dev install fail.
+        url = git("config", "-f", ".gitmodules", f"submodule.grammars/{name}.url")
+        if url != entry["repository"]:
+            fail(f"submodule grammars/{name} url {url!r} != grammars.{name}.repository")
+        head = git("-C", f"grammars/{name}", "rev-parse", "HEAD")
+        if head != entry["commit"]:
+            fail(f"submodule grammars/{name} is at {head}, manifest pins {entry['commit']}")
 
     languages = {}
     for directory in LANGUAGES:
@@ -76,25 +90,28 @@ def main() -> None:
             if language not in languages:
                 fail(f"language server {server}: language {language!r} has no config.toml")
 
-    for language, directory in manifest.get("snippets", {}).items():
-        snippet_dir = ROOT / directory
-        if not snippet_dir.is_dir():
-            fail(f"snippet directory {directory} is missing")
-        if language not in languages:
-            fail(f"snippets registered for unknown language {language!r}")
-        files = list(snippet_dir.glob("*.json"))
-        if not files:
-            fail(f"snippet directory {directory} contains no .json files")
-        for path in files:
-            try:
-                entries = json.loads(path.read_text())
-            except json.JSONDecodeError as err:
-                fail(f"{path} does not parse: {err}")
-            if not entries:
-                fail(f"{path} contains no snippets")
-            for prefix, snippet in entries.items():
-                if not snippet.get("body"):
-                    fail(f"{path}: snippet {prefix!r} has an empty body")
+    snippets = manifest.get("snippets", [])
+    if isinstance(snippets, str):
+        snippets = [snippets]
+    if not isinstance(snippets, list):
+        fail("snippets must be a path or a list of paths")
+    # Zed keys snippet files by stem and matches it against the lowercased language name.
+    scopes = {name.lower(): name for name in languages}
+    for entry in snippets:
+        path = ROOT / entry
+        if not path.is_file():
+            fail(f"snippet file {entry} is missing")
+        if path.stem != "snippets" and path.stem not in scopes:
+            fail(f"snippet file {entry} does not match any language scope")
+        try:
+            entries = json.loads(path.read_text())
+        except json.JSONDecodeError as err:
+            fail(f"{path} does not parse: {err}")
+        if not entries:
+            fail(f"{path} contains no snippets")
+        for prefix, snippet in entries.items():
+            if not snippet.get("body"):
+                fail(f"{path}: snippet {prefix!r} has an empty body")
 
     for schema in ("lispico-project.schema.json", "lispico-catalog.schema.json"):
         path = ROOT / "schemas" / schema

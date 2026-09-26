@@ -1,6 +1,6 @@
 [submodule "grammars/clojure"]
 	path = grammars/clojure
-	url = https://github.com/sogaiu/tree-sitter-clojure.git
+	url = https://github.com/sogaiu/tree-sitter-clojure
 [submodule "grammars/commonlisp"]
 	path = grammars/commonlisp
-	url = https://github.com/tree-sitter-grammars/tree-sitter-commonlisp.git
+	url = https://github.com/tree-sitter-grammars/tree-sitter-commonlisp

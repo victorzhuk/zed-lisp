@@ -1,6 +1,6 @@
 .PHONY: all build check clean fmt lint test check-package
 
-WASM_TARGET = wasm32-wasip1
+WASM_TARGET = wasm32-wasip2
 
 # Bounded verification (change: add-lispico-development-support). Test
 # commands get a finite wall-clock limit and explicit worker caps; the same

@@ -9,6 +9,7 @@ use common::{
 };
 use serde_json::Value;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 fn read_json(path: std::path::PathBuf) -> Value {
     let text =
@@ -76,19 +77,9 @@ fn manifest_references_existing_resources() {
         );
     }
 
-    let snippets = manifest
-        .get("snippets")
-        .and_then(|s| s.as_table())
-        .expect("extension.toml must register snippet directories");
-    for (language, dir) in snippets {
-        let path = project_root().join(dir.as_str().unwrap());
-        assert!(path.is_dir(), "snippet directory {dir} is missing");
-        let has_json = std::fs::read_dir(&path)
-            .unwrap()
-            .flatten()
-            .any(|entry| entry.path().extension().is_some_and(|ext| ext == "json"));
-        assert!(has_json, "snippet directory {dir} contains no .json files");
-        language_dir_for_name(language);
+    for (language, path) in snippet_files(&manifest) {
+        assert!(path.is_file(), "snippet file {} is missing", path.display());
+        language_dir_for_name(&language);
     }
 
     let servers = manifest
@@ -183,23 +174,57 @@ fn common_lisp_defaults_are_preserved() {
     );
 }
 
-fn language_dir_for_name(language: &str) -> String {
-    for dir in ["commonlisp", "lispico-clojure", "lispico-cl"] {
-        let config: toml::Value = toml::from_str(
-            &std::fs::read_to_string(
-                project_root()
-                    .join("languages")
-                    .join(dir)
-                    .join("config.toml"),
-            )
-            .unwrap(),
+/// Resolves the manifest's snippet files to the language each one serves.
+/// Zed keys a snippet file by its stem and matches it against the lowercased
+/// language name, so every stem must equal some language's scope id.
+fn snippet_files(manifest: &toml::Value) -> Vec<(String, PathBuf)> {
+    let paths: Vec<&str> = match manifest
+        .get("snippets")
+        .expect("extension.toml must register snippet files")
+    {
+        toml::Value::String(path) => vec![path.as_str()],
+        toml::Value::Array(paths) => paths.iter().map(|p| p.as_str().unwrap()).collect(),
+        other => panic!("snippets must be a path or a list of paths, got {other:?}"),
+    };
+    paths
+        .into_iter()
+        .map(|entry| {
+            let path = project_root().join(entry);
+            let stem = path.file_stem().unwrap().to_str().unwrap().to_string();
+            let language = ["commonlisp", "lispico-clojure", "lispico-cl"]
+                .iter()
+                .map(|dir| language_name(dir))
+                .find(|name| name.to_lowercase() == stem)
+                .unwrap_or_else(|| panic!("snippet file {entry} matches no language scope"));
+            (language, path)
+        })
+        .collect()
+}
+
+fn language_name(dir: &str) -> String {
+    let config: toml::Value = toml::from_str(
+        &std::fs::read_to_string(
+            project_root()
+                .join("languages")
+                .join(dir)
+                .join("config.toml"),
         )
-        .unwrap();
-        if config.get("name").and_then(|n| n.as_str()) == Some(language) {
-            return dir.to_string();
-        }
-    }
-    panic!("no language directory declares name {language:?}")
+        .unwrap(),
+    )
+    .unwrap();
+    config
+        .get("name")
+        .and_then(|n| n.as_str())
+        .unwrap()
+        .to_string()
+}
+
+fn language_dir_for_name(language: &str) -> String {
+    ["commonlisp", "lispico-clojure", "lispico-cl"]
+        .into_iter()
+        .find(|dir| language_name(dir) == language)
+        .unwrap_or_else(|| panic!("no language directory declares name {language:?}"))
+        .to_string()
 }
 
 fn language_grammar(language: &str) -> &'static str {
@@ -223,37 +248,27 @@ fn language_grammar(language: &str) -> &'static str {
 #[test]
 fn expanded_snippets_parse_in_their_language() {
     let manifest = manifest();
-    for (language, dir) in manifest.get("snippets").and_then(|s| s.as_table()).unwrap() {
-        let dir = dir.as_str().unwrap();
-        let grammar = match language_grammar(language) {
+    for (language, path) in snippet_files(&manifest) {
+        let grammar = match language_grammar(&language) {
             "clojure" => clojure_language(),
             _ => commonlisp_language(),
         };
-        for entry in std::fs::read_dir(project_root().join(dir))
-            .unwrap()
-            .flatten()
-        {
-            let path = entry.path();
-            if path.extension().is_none_or(|ext| ext != "json") {
-                continue;
-            }
-            let snippets: BTreeMap<String, Value> =
-                serde_json::from_str(&std::fs::read_to_string(&path).unwrap())
-                    .unwrap_or_else(|err| panic!("{}: {err}", path.display()));
-            assert!(!snippets.is_empty(), "{}: no snippets", path.display());
-            for (prefix, snippet) in snippets {
-                let body = snippet
-                    .get("body")
-                    .and_then(|b| b.as_str())
-                    .unwrap_or_else(|| panic!("{}: {prefix} has no body", path.display()));
-                let expanded = expand_snippet(body);
-                parse(
-                    &grammar,
-                    &expanded,
-                    true,
-                    &format!("{} snippet {prefix}", path.display()),
-                );
-            }
+        let snippets: BTreeMap<String, Value> =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap())
+                .unwrap_or_else(|err| panic!("{}: {err}", path.display()));
+        assert!(!snippets.is_empty(), "{}: no snippets", path.display());
+        for (prefix, snippet) in snippets {
+            let body = snippet
+                .get("body")
+                .and_then(|b| b.as_str())
+                .unwrap_or_else(|| panic!("{}: {prefix} has no body", path.display()));
+            let expanded = expand_snippet(body);
+            parse(
+                &grammar,
+                &expanded,
+                true,
+                &format!("{} snippet {prefix}", path.display()),
+            );
         }
     }
 }

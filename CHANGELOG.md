@@ -1,3 +1,10 @@
+## Unreleased
+
+- Fix dev-extension install failing with `data did not match any variant of untagged enum ExtensionSnippets`: `snippets` is now a top-level list of files named after each language's snippet scope (`lispico clojure.json`, `lispico cl.json`), so the snippets also reach their modes
+- Fix grammar checkout rejecting the bundled `grammars/` submodules: submodule URLs now match the manifest repositories exactly
+- Add bracket matching queries for `Lispico Clojure` and `Lispico CL`
+- Build and lint for `wasm32-wasip2`, the target Zed compiles extensions with; package checks now verify snippet scopes and submodule URLs/commits against the manifest
+
 ## 0.5.0 (2026-09-26)
 
 - Add opt-in `Lispico Clojure` and `Lispico CL` language modes for go-lispico dialects, with dialect-correct highlighting, brackets, indentation, outline, and text objects. Neither mode claims global file suffixes; ordinary `Common Lisp` associations and sextant behavior are unchanged
