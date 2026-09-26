@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.1 (2026-09-26)
 
 - Fix dev-extension install failing with `data did not match any variant of untagged enum ExtensionSnippets`: `snippets` is now a top-level list of files named after each language's snippet scope (`lispico clojure.json`, `lispico cl.json`), so the snippets also reach their modes
 - Fix grammar checkout rejecting the bundled `grammars/` submodules: submodule URLs now match the manifest repositories exactly
