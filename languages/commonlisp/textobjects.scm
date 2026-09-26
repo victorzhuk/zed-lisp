@@ -9,4 +9,4 @@
   .
   (sym_lit)
   .
-  (_) @class.inside)
+  (_)+ @class.inside)

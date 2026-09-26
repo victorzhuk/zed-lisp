@@ -208,7 +208,9 @@ impl CommonLispExtension {
             });
         }
 
+        let mut roswell_attempted = false;
         if let Some(ros_path) = worktree.which("ros") {
+            roswell_attempted = true;
             set_language_server_installation_status(
                 language_server_id,
                 &LanguageServerInstallationStatus::Downloading,
@@ -259,14 +261,25 @@ impl CommonLispExtension {
             }
         }
 
-        Err(
-            "sextant not found on PATH and Roswell (ros) is unavailable to build it. \
-             Install Roswell, then run:\n\
-             ros install victorzhuk/sextant\n\
-             and add ~/.roswell/bin to PATH, or set the binary path in Zed settings:\n\
-             {\"lsp\": {\"sextant\": {\"binary\": {\"path\": \"/path/to/sextant\"}}}}"
-                .into(),
-        )
+        if roswell_attempted {
+            // Roswell was available but did not yield a usable sextant — the
+            // failure is the build or PATH, not a missing Roswell.
+            Err("sextant was not downloaded and the Roswell build \
+                 (ros install victorzhuk/sextant) did not produce a usable binary either. \
+                 Run the install manually to see the underlying failure and add \
+                 ~/.roswell/bin to PATH, or set the binary path in Zed settings:\n\
+                 {\"lsp\": {\"sextant\": {\"binary\": {\"path\": \"/path/to/sextant\"}}}}"
+                .into())
+        } else {
+            Err(
+                "sextant not found on PATH and Roswell (ros) is unavailable to build it. \
+                 Install Roswell, then run:\n\
+                 ros install victorzhuk/sextant\n\
+                 and add ~/.roswell/bin to PATH, or set the binary path in Zed settings:\n\
+                 {\"lsp\": {\"sextant\": {\"binary\": {\"path\": \"/path/to/sextant\"}}}}"
+                    .into(),
+            )
+        }
     }
 
     fn download_sextant(
@@ -309,13 +322,31 @@ impl CommonLispExtension {
                 language_server_id,
                 &LanguageServerInstallationStatus::Downloading,
             );
-            zed::download_file(
+            // A failed download must not abort the resolution chain: report
+            // the failure and let the Roswell fallback try.
+            if let Err(err) = zed::download_file(
                 &asset.download_url,
                 &binary_path,
                 zed::DownloadedFileType::Uncompressed,
-            )
-            .map_err(|err| format!("download sextant {}: {err}", release.version))?;
-            zed::make_file_executable(&binary_path)?;
+            ) {
+                set_language_server_installation_status(
+                    language_server_id,
+                    &LanguageServerInstallationStatus::Failed(format!(
+                        "download sextant {}: {err}",
+                        release.version
+                    )),
+                );
+                return Ok(None);
+            }
+            if let Err(err) = zed::make_file_executable(&binary_path) {
+                set_language_server_installation_status(
+                    language_server_id,
+                    &LanguageServerInstallationStatus::Failed(format!(
+                        "make sextant executable: {err}"
+                    )),
+                );
+                return Ok(None);
+            }
 
             if let Ok(entries) = std::fs::read_dir(".") {
                 for entry in entries.flatten() {

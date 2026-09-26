@@ -6,6 +6,9 @@
 - Add `.lispico.json` project and declaration-catalog JSON schemas plus tested configuration templates for zhk, Yagel, and go-lispico under `examples/`, with opt-in host-specific snippet examples
 - Pin the grammars as submodules (tree-sitter-commonlisp `3232350`, tree-sitter-clojure `e43eff8`) and add a corpus/query verification harness: fixtures from the three target projects plus Common Lisp regressions parse against the pinned grammars, every shipped query compiles, templates and schemas validate, and packaged resources are checked in CI
 - Bound test verification: `make test` runs the tests with a 300s wall limit, four build jobs, and four test threads; CI uses the same wrapper and packages the new snippet, schema, and example resources in releases
+- Fix sextant download failures to fall through to the Roswell build instead of aborting server resolution
+- Fix the error shown when the Roswell build fails: it no longer claims Roswell is unavailable when Roswell ran and did not produce a binary
+- Fix Common Lisp list text objects to select the whole list interior instead of only the first child after the head
 
 ## 0.4.0 (2026-07-04)
 

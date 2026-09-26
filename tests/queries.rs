@@ -168,3 +168,25 @@ fn highlight_queries_capture_expected_dialect_structures() {
         );
     }
 }
+
+#[test]
+fn common_lisp_list_textobjects_select_the_whole_interior() {
+    let language = commonlisp_language();
+    let query_source =
+        std::fs::read_to_string(project_root().join("languages/commonlisp/textobjects.scm"))
+            .unwrap();
+
+    let mut inside: Vec<String> = query_captures(language, &query_source, "(f 1 2 3)")
+        .into_iter()
+        .filter(|(name, _)| name == "class.inside")
+        .map(|(_, text)| text)
+        .collect();
+    inside.sort();
+    inside.dedup();
+
+    assert_eq!(
+        inside,
+        vec!["1", "2", "3"],
+        "the list interior must cover every child after the head"
+    );
+}
