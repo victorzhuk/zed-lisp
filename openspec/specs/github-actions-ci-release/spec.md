@@ -1,4 +1,10 @@
-## ADDED Requirements
+# GitHub Actions CI and release
+
+## Purpose
+
+Verify the Zed extension on supported repository events and publish release artifacts only after successful checks.
+
+## Requirements
 
 ### Requirement: GitHub Actions workflow definition
 

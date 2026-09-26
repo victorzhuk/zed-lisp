@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Common Lisp language support
+
+## Purpose
+
+Provide Common Lisp recognition, syntax highlighting, and structural editing through the Zed extension.
+
+## Requirements
 
 ### Requirement: Extension manifest and build configuration
 

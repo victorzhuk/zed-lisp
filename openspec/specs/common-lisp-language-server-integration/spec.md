@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Common Lisp language server integration
+
+## Purpose
+
+Connect Common Lisp buffers in Zed to sextant with configurable command resolution and language server settings.
+
+## Requirements
 
 ### Requirement: Language server declaration
 
