@@ -2,13 +2,15 @@
 
 ### Added
 
-- Add `schemas/lispico-packs.schema.json` for the installed-pack snapshot a `packs` layer locks instead of reading a live directory, and let a `packs` layer select either a live `root` or a `snapshot` with its `expected_fingerprint` — never both, never neither
-- Add per-file source provenance to the declaration catalog schema: `source_fingerprint` and `source_files` are required together, and a catalog entry may name a `source_root` checkout used to verify declared file fingerprints
+- Add `schemas/lispico-packs.schema.json`, the version-1 shape of an installed-pack snapshot: `source_revision`, `selection_generation`, the installed `packs`, the `entries` each contributed, and the `problems` recorded while reading them. A readable entry carries its pack-relative `source` and `source_digest`; an unreadable one carries neither
+- Add `source_files` to the declaration catalog schema: a duplicate-free list of unique relative paths (256 max) that is only valid together with the aggregate `source_fingerprint` it was computed over. The paths carry no per-file digests
+- Add `snapshot` and `expected_fingerprint` to the project schema so a `packs` layer selects either a live `root` or a locked snapshot — never both, never neither. `snapshot` and `expected_fingerprint` are forbidden on the other layer kinds
 
 ### Changed
 
-- Migrate `.lispico.json` and the declaration catalogs to `schema_version: 2`, and the three `examples/` templates with them: contexts now require a `dialect` and a `profile`, `prelude` belongs to the `zhk` profile, ordered `layers` to the Yagel profiles, and the `runtime` profile takes neither
-- Record that the schemas fix document structure only. Catalog `source_root` verification, host contexts, installed-pack capture, snapshot ordering, digest recomputation over raw payloads, and symlink- and race-safe filesystem reads remain consumer and producer work, and `llsp` 0.2.1 implements none of them
+- Move the project and declaration-catalog schemas to `schema_version: 2` and the three `examples/` templates with them. `source_fingerprint` is now a lowercase SHA-256 instead of any non-empty string, and a `packs` layer no longer requires `root`
+- Tighten the packaged-resource check to validate the new snapshot schema alongside the project and catalog schemas
+- Record what the schemas deliberately do not do. No code yet reads a `source_root` checkout, derives a fingerprint, captures an installed-pack snapshot, or recomputes a digest over raw payloads; host context resolution, snapshot ordering, and symlink- and race-safe reads are equally unwritten. That work belongs to go-lispico and the host projects, and [llsp](https://github.com/victorzhuk/llsp) 0.2.1 — the currently released `lispico-lsp` — implements none of it
 
 ## 0.5.2 (2026-09-26)
 

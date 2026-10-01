@@ -72,9 +72,9 @@ You can also select **Editor: Set Language** manually on any buffer.
 
 `.lispico.json` at the worktree root describes the dialect, host profile, enabled libraries, catalogs, and source visibility. Three draft-07 JSON Schemas ship with the extension and are validated in CI:
 
-- [`schemas/lispico-project.schema.json`](schemas/lispico-project.schema.json) — `schema_version: 2`. Requires `schema_version` and a non-empty `contexts` array; each context names its `files` globs, `dialect` (`cl` or `clojure`), and host `profile` (`runtime`, `zhk`, `yagel-rule`, `yagel-workflow`). `prelude` belongs to the `zhk` profile, ordered `layers` to the Yagel profiles, and the `runtime` profile takes neither.
-- [`schemas/lispico-catalog.schema.json`](schemas/lispico-catalog.schema.json) — `schema_version: 2`. An inert declaration catalog pinned to exactly one of `source_version` or `source_revision`, with `source_fingerprint` and per-file `source_files` required whenever the catalog claims per-file provenance.
-- [`schemas/lispico-packs.schema.json`](schemas/lispico-packs.schema.json) — `schema_version: 1`. The inert shape of an installed-pack snapshot: `packs`, the `entries` each pack contributed, and the `problems` recorded while reading them. A `packs` layer selects either a live `root` or a locked `snapshot` with its `expected_fingerprint` — never both, never neither.
+- [`schemas/lispico-project.schema.json`](schemas/lispico-project.schema.json) — `schema_version: 2`. Requires `schema_version` and a non-empty `contexts` array; each context names its `files` globs, `dialect` (`cl` or `clojure`), and host `profile` (`runtime`, `zhk`, `yagel-rule`, `yagel-workflow`). `prelude` belongs to the `zhk` profile, ordered `layers` to the Yagel profiles, and the `runtime` profile takes neither. A `catalogs[]` reference may name a `source_root` checkout used to verify that catalog's declared files — that key has been part of the schema since 0.5.0 and is unrelated to `source_files` below.
+- [`schemas/lispico-catalog.schema.json`](schemas/lispico-catalog.schema.json) — `schema_version: 2`. An inert declaration catalog pinned to exactly one of `source_version` or `source_revision`. `source_files` is a duplicate-free list of unique relative paths, accepted only together with the aggregate `source_fingerprint` it was derived from; the paths carry no per-file digests of their own.
+- [`schemas/lispico-packs.schema.json`](schemas/lispico-packs.schema.json) — `schema_version: 1`. The inert shape of an installed-pack snapshot: `packs`, the `entries` each pack contributed, and the `problems` recorded while reading them. A readable entry carries its pack-relative `source` and `source_digest`; an unreadable one carries neither. A `packs` layer selects either a live `root` or a locked `snapshot` with its `expected_fingerprint` — never both, never neither.
 
 See the [examples README](examples/README.md) for a walkthrough.
 
@@ -82,7 +82,7 @@ The configuration is declarative and never executed. Relative paths resolve from
 
 #### What the schemas do not do
 
-The schemas fix document structure only. Catalog `source_root` verification, host contexts (`zhk` prelude and Yagel layer resolution), installed-pack capture, snapshot ordering, digest recomputation over raw payloads, and symlink- and race-safe filesystem reads are consumer and producer work owned by go-lispico and the host projects. The shipped server (`llsp` 0.2.1) implements none of them, so a configuration that validates still gets syntax-level Lispico support only until that work lands.
+The schemas fix document structure only. Nothing yet reads a `source_root` checkout, derives a `source_fingerprint` from a checkout, captures an installed-pack snapshot, or recomputes a digest over raw payloads. Host context resolution (`zhk` prelude, Yagel layers), snapshot ordering, and symlink- and race-safe filesystem reads are also unwritten. All of it belongs to go-lispico and the host projects. [llsp](https://github.com/victorzhuk/llsp) 0.2.1, the currently released `lispico-lsp`, implements none of it, so a configuration that validates still gets syntax-level Lispico support only until that work lands.
 
 ### Server settings
 
@@ -234,7 +234,8 @@ The extension is built as a WebAssembly module using the Zed extension API:
 ## Links
 
 - [sextant](https://github.com/victorzhuk/sextant) — Common Lisp Language Server Protocol implementation
-- [go-lispico](https://github.com/victorzhuk/go-lispico) — the Lispico runtime; home of the `lispico-lsp`/`lispico-check` tooling, whose current `llsp` release does not yet implement the schema-version-2 contracts
+- [go-lispico](https://github.com/victorzhuk/go-lispico) — the Lispico runtime the `Lispico` modes and their declaration catalogs target
+- [llsp](https://github.com/victorzhuk/llsp) — the `lispico-lsp` language server; release 0.2.1 implements none of the schema-version-2 contracts
 - [tree-sitter-commonlisp](https://github.com/tree-sitter-grammars/tree-sitter-commonlisp) — Tree-sitter grammar for Common Lisp
 - [tree-sitter-clojure](https://github.com/sogaiu/tree-sitter-clojure) — structural grammar used by the Lispico modes
 - [Roswell](https://github.com/roswell/roswell) — Common Lisp environment setup utility
