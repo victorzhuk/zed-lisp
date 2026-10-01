@@ -733,7 +733,7 @@ fn packs_layer_selection_contracts() {
     let schema = read_json(project_root().join("schemas/lispico-project.schema.json"));
     let schema = jsonschema::validator_for(&schema).expect("project schema must compile");
 
-    let fingerprint = "b".repeat(64);
+    let fingerprint = format!("sha256:{}", "b".repeat(64));
 
     let context_with = |layers: Value| {
         serde_json::json!({
@@ -810,6 +810,35 @@ fn packs_layer_selection_contracts() {
         ]))),
         "only packs layers may pin a snapshot fingerprint"
     );
+
+    for bad in [
+        "b".repeat(64),
+        format!("sha256:{}", "B".repeat(64)),
+        "sha256:abcd".to_string(),
+    ] {
+        assert!(
+            !schema.is_valid(&context_with(serde_json::json!([
+                { "kind": "packs", "snapshot": "packs/snapshot.json", "expected_fingerprint": bad }
+            ]))),
+            "expected_fingerprint must be a prefixed lowercase sha256 digest"
+        );
+    }
+
+    assert!(
+        schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "packs", "snapshot": "name:variant/snapshot.json", "expected_fingerprint": fingerprint }
+        ]))),
+        "snapshot paths with colon segments are accepted"
+    );
+
+    for bad in ["C:relative", "a:variant"] {
+        assert!(
+            !schema.is_valid(&context_with(serde_json::json!([
+                { "kind": "packs", "snapshot": bad, "expected_fingerprint": fingerprint }
+            ]))),
+            "snapshot paths reject drive-relative prefixes"
+        );
+    }
 }
 
 #[test]
@@ -817,7 +846,7 @@ fn installed_pack_snapshot_contracts() {
     let schema = read_json(project_root().join("schemas/lispico-packs.schema.json"));
     let schema = jsonschema::validator_for(&schema).expect("packs schema must compile");
 
-    let digest = "c".repeat(64);
+    let digest = format!("sha256:{}", "c".repeat(64));
     let valid: Value = serde_json::from_str(&format!(
         r#"{{
         "schema_version": 1,
@@ -883,8 +912,48 @@ fn installed_pack_snapshot_contracts() {
     bad_source_digest["entries"][0]["source_digest"] = Value::from("short");
     assert!(
         !schema.is_valid(&bad_source_digest),
-        "readable entries carry a lowercase sha256 digest"
+        "readable entries carry a prefixed lowercase sha256 digest"
     );
+
+    for bad in [
+        "c".repeat(64),
+        format!("sha256:{}", "C".repeat(64)),
+        "sha256:abcd".to_string(),
+    ] {
+        let mut bad_digest = valid.clone();
+        bad_digest["entries"][0]["source_digest"] = Value::from(bad);
+        assert!(
+            !schema.is_valid(&bad_digest),
+            "source_digest must be a prefixed lowercase sha256 digest"
+        );
+    }
+
+    assert!(
+        {
+            let mut colon_source = valid.clone();
+            colon_source["entries"][0]["source"] = Value::from("name:variant/memory.clj");
+            schema.is_valid(&colon_source)
+        },
+        "entry sources with colon segments are accepted"
+    );
+
+    assert!(
+        {
+            let mut colon_source = valid.clone();
+            colon_source["entries"][0]["source"] = Value::from("dir/a:b.clj");
+            schema.is_valid(&colon_source)
+        },
+        "entry sources with nested colon segments are accepted"
+    );
+
+    for bad in ["C:relative", "a:variant"] {
+        let mut bad_source_path = valid.clone();
+        bad_source_path["entries"][0]["source"] = Value::from(bad);
+        assert!(
+            !schema.is_valid(&bad_source_path),
+            "entry sources reject drive-relative prefixes"
+        );
+    }
 
     let mut bad_source_path = valid.clone();
     bad_source_path["entries"][0]["source"] = Value::from("/abs/rules/memory.clj");
