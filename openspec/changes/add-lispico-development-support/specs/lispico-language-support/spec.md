@@ -66,8 +66,8 @@ The extension SHALL provide dialect-scoped snippets for supported definitions, b
 
 ### Requirement: Structural features survive absent semantic tooling
 
-Highlighting, bracket matching, indentation, outline, and text objects SHALL remain usable when the native language server or host catalogs are absent.
+Highlighting, bracket matching, indentation, outline, and text objects SHALL remain usable when the language server or host catalogs are absent.
 
 #### Scenario: Server not installed
-- **WHEN** a Lispico source opens without the native server available
+- **WHEN** a Lispico source opens without the language server available
 - **THEN** structural editing works and the missing semantic dependency is reported separately

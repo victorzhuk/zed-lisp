@@ -4,21 +4,25 @@ Connect Zed to a native static Lispico service for accurate semantic editing of 
 
 ## ADDED Requirements
 
-### Requirement: Isolated server association and launch
+### Requirement: Lispico mode isolation from ordinary Common Lisp
 
-The extension SHALL register the proposed `lispico-lsp` server for Lispico modes only, with explicit language IDs. It SHALL resolve a configured binary before PATH and forward configured arguments, environment, initialization options, and workspace settings. Missing binaries SHALL produce an actionable error without invoking sextant, Roswell, runtime evaluation, or an implicit build/download. Unknown server IDs MUST NOT fall through to sextant.
+The extension SHALL route `Lispico Clojure` and `Lispico CL` buffers to the shared language server with their explicit language identifiers, and SHALL keep their configuration independent of any other language's settings. Registered server entries, language identifiers, binary resolution, cache handling, and settings forwarding are owned by the `llsp-language-server-integration` capability in [migrate-to-llsp](../../../migrate-to-llsp/proposal.md); this requirement covers only what a Lispico buffer must observe. Launch SHALL never evaluate runtime code, run a host session, or execute project sources.
 
 #### Scenario: Explicit binary settings
-- **WHEN** a user configures a Lispico binary path, arguments, and environment
-- **THEN** that command receives those values and no Common Lisp server is started for the buffer
+- **WHEN** a user configures a binary path, arguments, and environment for the Lispico modes
+- **THEN** that command receives those values and no other server is started for the buffer
 
-#### Scenario: PATH binary
-- **WHEN** only arguments/environment are configured and `lispico-lsp` exists on PATH
+#### Scenario: PATH-resolved binary with settings
+- **WHEN** only arguments/environment are configured and the server binary exists on PATH
 - **THEN** those settings also apply to the PATH-resolved binary
 
 #### Scenario: Common Lisp buffer
 - **WHEN** an ordinary Common Lisp buffer opens
-- **THEN** its existing sextant settings and launch behavior remain independent of Lispico configuration
+- **THEN** its own settings and dialect selection remain independent of Lispico mode configuration, and changing Lispico configuration does not change the Common Lisp buffer's dialect
+
+#### Scenario: Unavailable server
+- **WHEN** the shared server cannot be resolved or started
+- **THEN** the extension reports the failure and leaves structural editing usable in both Lispico modes
 
 ### Requirement: Contextual completion and documentation
 
@@ -55,6 +59,10 @@ The service SHALL analyze unsaved document versions over disk contents, support 
 #### Scenario: Rapid edits
 - **WHEN** a newer document version arrives while an older analysis is running
 - **THEN** the old result cannot overwrite the new version's diagnostics or symbol state
+
+#### Scenario: Settings change reloads a Lispico buffer
+- **WHEN** a workspace settings change causes the server to reload the open documents of a buffer whose dialect came from its language ID
+- **THEN** that buffer keeps its dialect and its dialect-specific results, and a silent re-route to the default Common Lisp dialect is a failure rather than an accepted reload
 
 ### Requirement: Bounded responsive service
 

@@ -74,11 +74,15 @@ Every source diagnostic SHALL contain a stable code, severity, message, source U
 
 ### Requirement: Shared editor and batch results
 
-A proposed `lispico-check` command SHALL use the same analysis semantics, project configuration, and catalog versions as the language server. It SHALL provide human-readable and JSON results. JSON SHALL retain diagnostic codes, severities, paths, and ranges. Exit status SHALL be 0 for no error diagnostics, 1 for source errors, and 2 for configuration/tool failure. Batch execution SHALL be bounded and SHALL NOT modify source.
+A batch checker command SHALL use the same analysis semantics, project configuration, and catalog versions as the language server. The upstream `llsp` server's `check` subcommand is the batch entry point where its semantics fit; the host-aware analysis it does not yet provide is an open upstream prerequisite and an unmet part of this capability, not a reduced scope that satisfies it. The checker SHALL provide human-readable and machine-readable results. Machine-readable records SHALL retain diagnostic codes, severities, paths, and ranges. Exit status SHALL be 0 for no error diagnostics, 1 for source errors, and 2 for configuration/tool failure. Batch execution SHALL be bounded and SHALL NOT modify source.
 
 #### Scenario: Editor and CLI parity
 - **WHEN** the checker and server analyze the same saved source snapshot and context
 - **THEN** they report equivalent diagnostic codes, severities, and ranges
+
+#### Scenario: Checker coverage narrower than the editor contract
+- **WHEN** the available checker does not implement one of the diagnostics this capability requires
+- **THEN** that gap is reported as unmet work rather than presented as parity with the editor, and this capability is not treated as satisfied
 
 #### Scenario: Existing host checks remain available
 - **WHEN** a Yagel user also runs the existing `rules check` workflow

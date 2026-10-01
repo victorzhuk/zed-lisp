@@ -6,7 +6,7 @@ Resolve Lispico code against explicit dialect, library, and host scopes so edito
 
 ### Requirement: Portable deterministic project configuration
 
-The tooling SHALL accept a versioned declarative `.lispico.json` at the worktree root or an explicitly selected project file. Relative paths SHALL resolve from the selected file's directory. Configuration SHALL select runtime provenance, catalogs with independently expected host/library provenance, dialect, host profile, source patterns, enabled libraries, and applicable source-loading rules. It MUST NOT execute configuration, scan ancestor projects, or implicitly import user-home state.
+The tooling SHALL accept a versioned declarative `.lispico.json` at the worktree root or an explicitly selected project file. The coordinated host-aware implementation SHALL use project and catalog schema version 2 under the [approved shared contracts](../../contracts.md), without silently converting version-1 resources. Relative paths SHALL resolve from the selected file's directory. Configuration SHALL select runtime provenance, catalogs with independently expected host/library provenance, dialect, host profile, source patterns, enabled libraries, and applicable source-loading rules. It MUST NOT execute configuration, scan ancestor projects, or implicitly import user-home state.
 
 #### Scenario: Repository moves
 - **WHEN** a repository with relative configuration paths is opened from another directory
@@ -113,3 +113,39 @@ Yagel declarations SHALL distinguish values, pure functions, staging declaration
 #### Scenario: Non-callable host binding
 - **WHEN** a binding is verified as a host value
 - **THEN** completion and hover identify it as a value rather than fabricating a function signature
+
+### Requirement: Reproducible declared-source verification
+
+Catalogs SHALL pair `source_files` with `source_fingerprint` when either is present, using the canonical path ordering, SHA-256 framing, and bounded source reads defined in the [approved shared contracts](../../contracts.md). Configured expected fingerprints MUST match the catalog, and configured source roots SHALL require successful declared-byte verification. Without source roots, provenance MUST remain explicitly catalog-only. Manifest completeness remains the owner's responsibility; matching declared bytes MUST NOT be presented as proof that unlisted inputs cannot affect declarations.
+
+Every source read SHALL enforce regular-file, no-symlink, root-confinement properties throughout the read. Invalid paths, missing or unreadable inputs, resource breaches, and digest mismatches SHALL reject the complete catalog and invalidate previously loaded declarations.
+
+#### Scenario: Source changes after successful load
+- **WHEN** a declared metadata source changes after its catalog has successfully loaded
+- **THEN** verification reports stale metadata and removes the catalog's previously derived symbols instead of retaining them
+
+#### Scenario: Expected digest without a source checkout
+- **WHEN** an independently configured expected fingerprint differs from the selected catalog fingerprint and no source root is available
+- **THEN** the catalog is rejected rather than skipping the comparison
+
+#### Scenario: Manifest attempts to escape its root
+- **WHEN** a source path traverses outside its configured root or uses a symlinked path component
+- **THEN** the read is rejected without opening outside-root content
+
+### Requirement: Explicit installed-pack snapshot selection
+
+A Yagel packs layer SHALL select exactly one source-directory root or inert installed-pack snapshot. Snapshot selection SHALL pin the snapshot's raw-byte fingerprint and verify its readable source payloads. The snapshot SHALL preserve the production engine's selected pack generation, ordered key mapping, and unreadable key claims under the [approved shared contracts](../../contracts.md). llsp MUST NOT discover or open a live installed packstore, boot a host, or execute rules. Snapshot provenance SHALL describe the exported selected set, not claim live installed-store freshness.
+
+The snapshot and its payloads SHALL use the same bounded, race-safe, no-symlink confinement as catalog sources. Invalid replacement SHALL clear prior snapshot-derived results. A winning unreadable pack entry SHALL block lower layers; an explicitly selected higher-layer winner MAY replace it.
+
+#### Scenario: Installed export has protected content
+- **WHEN** an explicit Yagel export captures selected v1 packs
+- **THEN** it holds the active-set lease through verification and copying and releases it on success or failure without starting a host session
+
+#### Scenario: Pack declares a shadow key
+- **WHEN** a selected pack lists a rule-relative path in its verified shadows declaration
+- **THEN** the snapshot preserves that unprefixed key and the configured higher layers retain their normal precedence
+
+#### Scenario: Snapshot replacement is corrupt
+- **WHEN** a readable companion source fails its declared digest after an earlier valid snapshot was loaded
+- **THEN** the snapshot is rejected and its previous definitions are not retained as a fallback

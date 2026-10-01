@@ -1,0 +1,242 @@
+{
+  "version": 1,
+  "subject": "add-lispico-development-support",
+  "revision": "add-lispico-development-support@cd5d242b8153245f53c3c8875eff7d54d74b292cbc9c49ead12b0189e81de404",
+  "split": "3f2600bd44c1c2d203ff1b7fccc7a15b6d8a0b15263f58bd3c91d4724d47bfbc",
+  "parentSource": {
+    "documentDigest": "cd5d242b8153245f53c3c8875eff7d54d74b292cbc9c49ead12b0189e81de404",
+    "sourceSetDigest": "ad7f26479f041ce3f55ce3fcf4c1c9e825cc739e99ada0b59515b00f99d79cf3"
+  },
+  "obligations": [
+    {"id": "ob-1.1", "acceptance": "Recheck runtime and host working trees and pending dialect changes, record fixture provenance and dependency versions, and verify the source locations cited by the parent review against the live trees."},
+    {"id": "ob-1.2", "acceptance": "Bounded local and CI test wrappers exist for build and test, including Rust build/test worker caps and grammar-test wall limits; a failing test and a timeout both fail the wrapper; commands are documented in the existing README."},
+    {"id": "ob-1.3", "acceptance": "A portable syntax/query corpus covers the three projects plus Common Lisp regressions with per-fixture source provenance, and parses both Lispico dialects with list/vector bindings, `~`/`~@`, `#'`, CL `#(...)`, qualified symbols, Unicode, and incomplete forms."},
+    {"id": "ob-1.4", "acceptance": "The candidate Clojure grammar is pinned and every planned query capture compiles against it; the whole corpus passes before registration, and a required grammar fork is escalated to design approval instead of being adopted."},
+    {"id": "ob-1.5", "acceptance": "Versioned project and catalog schemas plus relative-path examples exist for runtime, zhk, Yagel rules, and explicit workflows; schema/config tests cover valid examples, identity conflicts, catalog-only provenance, unknown fields, profile constraints, glob semantics, and context non-overlap; precedence and degraded behavior are documented."},
+    {"id": "ob-2.1", "acceptance": "A separately approved upstream analysis/checker change exists in the owning repository, its actual CLI and configuration behavior is verified and documented before implementation, and its ownership is recorded."},
+    {"id": "ob-2.2", "acceptance": "Source-preserving parsing, recovery, and position conversion are verified and completed without changing runtime values or the evaluator hot path, covering dialect parity against the selected reader, incomplete input, Unicode ranges, and depth/size limits."},
+    {"id": "ob-2.3", "acceptance": "Lexical and namespace resolution plus form checks are verified and completed, covering CL adapters, parameter and rest bindings, sequential sibling visibility for both `let` and `let*`, quotation depth, catch bindings, and known macros, with dynamic-analysis limits documented and no speculative errors for unsupported macro expansion."},
+    {"id": "ob-2.4", "acceptance": "Inert core, dialect, stdlib, and JSON catalogs are published with verified signatures and provenance against authoritative runtime sources; names, aliases, adapter arities, macros, disabled-library isolation, both verified CL cells, and explicit snapshot refresh are demonstrated."},
+    {"id": "ob-2.5", "acceptance": "Shared diagnostic records and a bounded checker interface are verified and completed, covering human and JSON output, exact ranges and stable codes, exit 0/1/2, configuration-failure handling, no source writes or side effects, and documentation limited to verified options."},
+    {"id": "ob-3.1", "acceptance": "Separately approved host changes exist in each owning repository for metadata and profile snapshots, each preserving that host's execution behavior and describing the runtime version actually pinned by that checkout."},
+    {"id": "ob-3.2", "acceptance": "zhk names and verified arity/type facts are derived from the primitive registry, covering every entry, optional and zero arguments, source labels/docs/references, and zhk/sh, without changing execution behavior."},
+    {"id": "ob-3.3", "acceptance": "Yagel declarations are source-backed and distinguish root values, pure/staged/live functions, and workflow-only helpers, covering names, signatures, phases, and unknown-signature behavior without booting a live session."},
+    {"id": "ob-3.4", "acceptance": "Portable source-layout fixtures exist for both hosts: zhk ordered preludes, route isolation, and replacement workflow roots; Yagel layer winners, per-file isolation, and unreadable overrides; each distinguishes source-checkout from installed-runtime context and declares semantics without executing host code."},
+    {"id": "ob-4.1", "acceptance": "Explicit project loading, glob selection, catalog matching, configured roots, and bounded scans are implemented, verifying overlap rejection, no symlink traversal, external-root opt-in, unmatched-file handling, and no ambient discovery."},
+    {"id": "ob-4.2", "acceptance": "zhk ordered sequential-program resolution is implemented with binding origins, verifying route and prelude navigation, redefinition order, shared-prelude uncertainty, auxiliary-file exclusion, route isolation, and unsaved-prelude invalidation."},
+    {"id": "ob-4.3", "acceptance": "Yagel overlays and isolated rule/workflow contexts are implemented, verifying layer winners, absence of cross-rule resolution, proven phase restrictions, workflow-only helpers, and shadowed-file state."},
+    {"id": "ob-4.4", "acceptance": "Host-aware completion, hover, signature help, definitions, references, symbols, and diagnostics work over real stdio LSP, verifying catalog-backed requests, negotiated position accuracy, and retention of the existing llsp lifecycle and dialect-reload guarantees."},
+    {"id": "ob-4.5", "acceptance": "Versioned-buffer handling, cancellation, bounded indexing, reload/invalidation, and stale-result suppression are verified and completed across edits, close, delete, restart, invalid configuration, independent worktrees, and context switches."},
+    {"id": "ob-4.6", "acceptance": "Checker and server produce parity on identical saved snapshots with correct encoding normalization, and zero execution is demonstrated for effectful top-level forms, macro bodies, and plugins, with bounded upstream commands and observed results recorded."},
+    {"id": "ob-5.1", "acceptance": "Both opt-in Lispico modes are registered with tested highlights, brackets, indentation, outline, scope overrides, and text objects; query snapshots pass and manual language selection works while the Common Lisp suffix defaults remain unchanged."},
+    {"id": "ob-5.2", "acceptance": "Language-scoped valid snippets and host-specific opt-in examples ship; expanded snippets parse after placeholder expansion and zhk suggestions never inherit Yagel declarations automatically."},
+    {"id": "ob-5.3", "acceptance": "Server commands are dispatched by ID with configured-path and PATH Lispico resolution and settings pass-through; args, env, and options across both paths, missing-binary behavior, unknown IDs, and the absence of any fallback to a different server for Lispico are covered."},
+    {"id": "ob-5.4", "acceptance": "Tested `.zed/settings.json` and `.lispico.json` templates for all three projects plus schemas validate, covering path matching, mixed-dialect fixtures, catalog/source navigation without sibling checkouts, and documented syntax-only degraded behavior."},
+    {"id": "ob-5.5", "acceptance": "The existing README architecture/configuration sections and the `[Unreleased]` changelog are updated after behavior lands, using real installed CLI options and clearly separating Lispico, ordinary Common Lisp, and Yagel's existing host checks."},
+    {"id": "ob-5.6", "acceptance": "CI and package checks cover queries, templates, snippets, catalog resources, and compatible upstream evidence; a clean-checkout bounded run passes, a local release archive layout is inspected before publication, and packaging validation fails when a referenced resource is absent."},
+    {"id": "ob-6.1", "acceptance": "Actual Zed smoke tests exercise runtime contexts: both dialects, aliases, completion and signatures, navigation, diagnostics, and valid snippets, with versions, fixtures, actions, and observed results recorded."},
+    {"id": "ob-6.2", "acceptance": "Actual Zed smoke tests exercise zhk: explicit Clojure mode, host completion, prelude navigation, route isolation, and clearing unsaved errors, without executing workflows."},
+    {"id": "ob-6.3", "acceptance": "Actual Zed smoke tests exercise Yagel: host context, rule isolation, layers, proven phase restrictions, workflow opt-in, and project-local catalog navigation, without starting sessions or applying rules."},
+    {"id": "ob-6.4", "acceptance": "Actual Zed re-checks cover plain Common Lisp recognition, highlighting, outline and text objects, and server settings, showing that missing Lispico tooling does not disrupt structural editing; unrelated maintenance findings are recorded separately."},
+    {"id": "ob-6.5", "acceptance": "Bounded full integration checks and strict OpenSpec validation pass, every capability has evidence, and no release readiness is claimed while any upstream dependency task remains open or the shared-server migration gates are unmet."},
+    {"id": "ob-req-source-verify", "acceptance": "Declared-source verification is implemented on the consumer side: canonical manifest ordering and digest framing, bounded anchored no-symlink reads, whole-catalog invalidation on any bad input, catalog-only provenance without a source root, and stale-metadata reporting after a previously successful load."},
+    {"id": "ob-req-no-effects", "acceptance": "Indexing and checking demonstrably perform no evaluation, macro expansion, plugin initialization, host session, rule or workflow execution, or shell/network/file-write effects, while independent syntax and local-scope results stay visible."},
+    {"id": "ob-req-snapshot-capture", "acceptance": "Yagel provides an explicit inert installed-pack export over a caller-selected store that reuses production selection semantics, holds the v1 active-set lease through verification and copying, uses self-contained v2 records, publishes only a complete verified snapshot/payload bundle with logical keys and shadow handling, and performs no ambient store discovery or host boot."},
+    {"id": "ob-req-snapshot-consume", "acceptance": "A Yagel packs layer selects exactly one source-directory root or an inert snapshot; snapshot selection pins and verifies the raw-byte digest and every readable payload, a winning unreadable entry blocks lower layers, an explicit higher-layer winner may replace it, and invalid replacement clears prior snapshot-derived results."}
+  ],
+  "children": [
+    {
+      "slug": "add-lispico-runtime-core-catalogs",
+      "deliverable": "An inert owner-side declaration producer and the published core, dialect, stdlib/macros, and JSON catalogs for go-lispico, carrying verified signatures, aliases, adapters in the library that exposes them, both verified CL cells, bounded paired source manifest/fingerprint, and actual tag provenance, plus catalog-consumer regression contracts.",
+      "acceptance": "Published catalogs validate against schema version 2; names, aliases, adapter arities, macros, disabled-library isolation, and both CL cells match authoritative runtime sources through deterministic parity tests; a real source mutation invalidates the catalog through the consumer contract; bounded `make test`, `make lint`, and `make build` plus an inert producer smoke are run and their observed results, produced artifacts, selected source inputs, and revisions recorded.",
+      "scope": {
+        "files": [
+          "go-lispico:internal/inventory/registered.go",
+          "go-lispico:plugins/stdlib/registered_surface_test.go",
+          "go-lispico:plugins/stdlib/inventory_source_test.go",
+          "go-lispico:plugins/stdlib/bootstrap.go",
+          "go-lispico:plugins/json/plugin.go",
+          "go-lispico:cl/cl.go",
+          "go-lispico:core/dialect.go"
+        ],
+        "dirs": ["go-lispico:internal/inventory", "go-lispico:internal/catalog", "go-lispico:plugins/stdlib"],
+        "contracts": [
+          "add-lispico-development-support/contracts.md#declared-source-fingerprints",
+          "add-lispico-development-support/contracts.md#declaration-semantics",
+          "add-lispico-development-support/design.md#5-inert-declarations-real-libraries",
+          "add-lispico-development-support/specs/lispico-project-context/spec.md#requirement-inert-versioned-host-and-library-declarations"
+        ]
+      },
+      "sourceRevision": "go-lispico:12e0990147c41a78186ad9424fb70a6369fab544"
+    },
+    {
+      "slug": "add-lispico-dialect-analyzer-checker",
+      "deliverable": "Completed dialect analysis and bounded batch-checker parity in the shared `llsp` server: source-preserving parsing with recovery and position conversion, lexical/namespace resolution with the reviewed runtime's sequential binding semantics, CL adapter and both-cell handling, shared diagnostic records, and the verified `check` interface with human and JSON output and exit 0/1/2, backed by go-lispico runtime parity fixtures.",
+      "acceptance": "Characterization tests pin sequential `let`/`let*` sibling visibility, `loop` initializers, catch parameters, CL adapters, quotation, and known-macro uncertainty; a mixed-dialect visibility contract proves a same-dialect helper resolves while a helper defined only in the other dialect produces the expected unresolved result with lint enabled; checker and server report identical codes, severities, and ranges for one saved source snapshot after encoding normalization; invalid configuration exits with the documented status; `task test` and `task lint` plus real checker/LSP smoke are run and recorded, and remaining gaps against the host contract are listed.",
+      "scope": {
+        "files": [
+          "llsp:src/analysis.rs",
+          "llsp:src/analysis/tests.rs",
+          "llsp:src/diagnostics.rs",
+          "llsp:src/main.rs",
+          "llsp:tests/lispico.rs",
+          "llsp:tests/cli.rs",
+          "llsp:dialects/lispico-cl.toml",
+          "llsp:dialects/lispico-clojure.toml"
+        ],
+        "dirs": ["llsp:src/analysis", "llsp:tests/support"],
+        "contracts": [
+          "add-lispico-development-support/design.md#2-analysis-model-with-the-server-role-supplied-upstream",
+          "add-lispico-development-support/specs/lispico-static-diagnostics/spec.md#requirement-dialect-and-form-validation",
+          "add-lispico-development-support/specs/lispico-static-diagnostics/spec.md#requirement-scope-and-known-call-diagnostics",
+          "add-lispico-development-support/specs/lispico-static-diagnostics/spec.md#requirement-shared-editor-and-batch-results"
+        ]
+      },
+      "sourceRevision": "llsp:436bc84c0f520c424d6b7a1c086f38e1ce0448e8"
+    },
+    {
+      "slug": "add-zhk-host-profile",
+      "deliverable": "zhk host declarations exported inertly from its actual primitive registry with verified arities, documentation, and source references, plus schema version 2 host metadata with exact owner revision and bounded source manifest, plus portable order/isolation fixtures describing lexical `lib/*.lisp`, the selected route `main.lisp`, auxiliary exclusion, wholesale replacement workflow roots, redefinition order, and shared-prelude route uncertainty.",
+      "acceptance": "Every primitive-registry entry is exported with its own guard-derived arity and unknown metadata omitted rather than invented; schema-2 metadata carries a matching owner revision and bounded source manifest with the runtime core/stdlib/JSON catalogs kept separate and pinned to v0.14.0; fixtures prove route isolation, ordered redefinition, auxiliary-file exclusion, and that `ZHK_WORKFLOWS` is never read implicitly by the analyzer; bounded `make test-pkg PKG=./internal/engine`, relevant workflow tests, `make test`, `make lint`, and an inert export smoke are run and observed results recorded, with no workflow execution.",
+      "scope": {
+        "files": ["zhk:internal/engine/engine.go", "zhk:workflows/embed.go"],
+        "dirs": ["zhk:internal/engine", "zhk:internal/catalog"],
+        "contracts": [
+          "add-lispico-development-support/contracts.md#declared-source-fingerprints",
+          "add-lispico-development-support/design.md#4-match-host-visibility-including-order-and-phase",
+          "add-lispico-development-support/specs/lispico-project-context/spec.md#requirement-zhk-ordered-workflow-visibility"
+        ]
+      },
+      "sourceRevision": "zhk:5052b8e1720814daa61ccc92a7e498c5e027ddfa"
+    },
+    {
+      "slug": "add-yagel-host-profile",
+      "deliverable": "Yagel source-backed host and workflow declarations classifying root values, pure/staged/live functions, and workflow-only helpers with verified signatures and phases; schema version 2 source provenance; an explicit inert installed-pack export producing a complete verified snapshot and payload bundle with logical keys, shadow handling, and selected-generation semantics; and source-profile plus installed-store fixture evidence for layer precedence, per-file isolation, and unreadable winners.",
+      "acceptance": "Exports carry verified names, signatures, phases, and omitted unknown metadata without booting a Core, starting a session, expanding macros, or executing rules; the export captures the selected generation under the approved lease/self-contained-copy rules and publishes only after every payload verifies, with no ambient store discovery; fixtures prove relative-key precedence, per-file isolation, unreadable winners blocking lower layers, higher-layer replacement, and failed snapshot replacement; bounded `make test-fast` for the affected CLI/core/rules/packstore packages, existing relevant rule checks, and a real inert exporter smoke are run and recorded, preserving the dirty Makefile.",
+      "scope": {
+        "files": [
+          "yagel:internal/core/primitive_names.go",
+          "yagel:internal/core/staging.go",
+          "yagel:internal/primitives/workflow_prelude.go",
+          "yagel:internal/cli/rules_surface.go",
+          "yagel:internal/packstore/layer.go",
+          "yagel:internal/packstore/v2.go"
+        ],
+        "dirs": ["yagel:internal/primitives", "yagel:internal/packstore", "yagel:internal/rules"],
+        "contracts": [
+          "add-lispico-development-support/contracts.md#installed-yagel-pack-layer-snapshots",
+          "add-lispico-development-support/contracts.md#declared-source-fingerprints",
+          "add-lispico-development-support/specs/lispico-project-context/spec.md#requirement-yagel-layers-and-file-isolation",
+          "add-lispico-development-support/specs/lispico-project-context/spec.md#requirement-explicit-installed-pack-snapshot-selection"
+        ]
+      },
+      "sourceRevision": "yagel:a984f4eea2615e2744521321f586f77f9ee698d1"
+    },
+    {
+      "slug": "add-llsp-host-context",
+      "deliverable": "Host-aware project context in the shared `llsp` server: typed project/catalog/snapshot loading and verification, a centrally context-scoped symbol visibility boundary carrying name/cell identity and declaration provenance, zhk ordered route snapshots with shared-prelude uncertainty, Yagel source layers and verified installed-pack snapshot consumption, and versioned-document lifecycle with invalidation, cancellation, and stale-result suppression.",
+      "acceptance": "Overlapping contexts are rejected, symlinked path components are refused, external roots require explicit configuration, and unmatched files keep syntax support; declared-source reads are anchored, bounded, and no-symlink, and any invalid input clears the catalog's previously derived symbols; a zhk route resolves its ordered prelude helper to the real definition while another route's same-named definition does not satisfy it; a Yagel unreadable winner blocks the lower layer and a shadowed file is identified as inactive; parity holds between checker and server on one saved snapshot with zero execution for effectful forms, macros, and plugins; `task test`/`task lint` and real saved-snapshot checker/LSP runs are recorded.",
+      "scope": {
+        "files": [
+          "llsp:src/config.rs",
+          "llsp:src/document.rs",
+          "llsp:src/workspace.rs",
+          "llsp:src/diagnostics.rs",
+          "llsp:src/server.rs",
+          "llsp:src/main.rs"
+        ],
+        "dirs": ["llsp:src/features", "llsp:src/analysis"],
+        "contracts": [
+          "add-lispico-development-support/contracts.md#declared-source-fingerprints",
+          "add-lispico-development-support/contracts.md#installed-yagel-pack-layer-snapshots",
+          "add-lispico-development-support/design.md#3-one-explicit-project-file",
+          "add-lispico-development-support/specs/lispico-language-server/spec.md#requirement-document-lifecycle-and-position-accuracy",
+          "add-lispico-development-support/specs/lispico-project-context/spec.md#requirement-reproducible-declared-source-verification"
+        ]
+      },
+      "sourceRevision": "llsp:436bc84c0f520c424d6b7a1c086f38e1ce0448e8"
+    },
+    {
+      "slug": "add-zed-lisp-acceptance",
+      "deliverable": "Integrated acceptance evidence from real Zed sessions for runtime dialects, zhk, Yagel, and ordinary Common Lisp, recording exact extension, server, runtime, host, catalog, and snapshot revisions plus fixture selection, and observing completion, signatures, navigation, diagnostics, phase and layer behavior, and missing-tooling degradation without executing host code.",
+      "acceptance": "Every acceptance session records observed results rather than protocol smoke: both dialects with valid snippets and unsaved Unicode edits whose errors are replaced at the displayed ranges; zhk prelude navigation, redefinition, route isolation, shared-file uncertainty, replacement roots, and unsaved-prelude invalidation; Yagel host values/signatures, workflow opt-in, proven phase boundaries, source overlays, installed snapshot keys, unreadable winners, and independent rule scopes; plain Common Lisp recognition, highlighting, outline/text objects, and server settings unaffected by missing Lispico tooling; opt-in associations and explicit server language IDs re-checked without changing ordinary Common Lisp defaults; bounded local wrappers run once for the coherent implementation set.",
+      "scope": {
+        "files": ["extension.toml", "src/common_lisp.rs", "scripts/check_package.py", "examples/README.md"],
+        "dirs": ["languages", "examples", "tests/corpus", ".github/workflows"],
+        "contracts": [
+          "add-lispico-development-support/design.md#delivery-and-verification",
+          "add-lispico-development-support/specs/lispico-language-support/spec.md#requirement-structural-features-survive-absent-semantic-tooling",
+          "add-lispico-development-support/specs/common-lisp-language-support/spec.md#requirement-common-lisp-file-recognition",
+          "add-lispico-development-support/specs/github-actions-ci-release/spec.md#requirement-release-artifact-publishing"
+        ]
+      },
+      "sourceRevision": "zed-lisp:10db097"
+    }
+  ],
+  "coverage": [
+    {"obligation": "ob-1.1", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-1.2", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-1.3", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-1.4", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-1.5", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-2.1", "primary": "add-lispico-dialect-analyzer-checker"},
+    {"obligation": "ob-2.2", "primary": "add-lispico-dialect-analyzer-checker"},
+    {"obligation": "ob-2.3", "primary": "add-lispico-dialect-analyzer-checker"},
+    {"obligation": "ob-2.4", "primary": "add-lispico-runtime-core-catalogs"},
+    {"obligation": "ob-2.5", "primary": "add-lispico-dialect-analyzer-checker"},
+    {"obligation": "ob-3.1", "primary": "integration:integ-02-host-approval"},
+    {"obligation": "ob-3.2", "primary": "add-zhk-host-profile"},
+    {"obligation": "ob-3.3", "primary": "add-yagel-host-profile"},
+    {"obligation": "ob-3.4", "primary": "add-zhk-host-profile", "supporting": "add-yagel-host-profile"},
+    {"obligation": "ob-4.1", "primary": "add-llsp-host-context"},
+    {"obligation": "ob-4.2", "primary": "add-llsp-host-context"},
+    {"obligation": "ob-4.3", "primary": "add-llsp-host-context"},
+    {"obligation": "ob-4.4", "primary": "add-llsp-host-context"},
+    {"obligation": "ob-4.5", "primary": "add-llsp-host-context"},
+    {"obligation": "ob-4.6", "primary": "add-llsp-host-context"},
+    {"obligation": "ob-5.1", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-5.2", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-5.3", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-5.4", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-5.5", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-5.6", "primary": "integration:integ-01-baseline"},
+    {"obligation": "ob-6.1", "primary": "add-zed-lisp-acceptance"},
+    {"obligation": "ob-6.2", "primary": "add-zed-lisp-acceptance"},
+    {"obligation": "ob-6.3", "primary": "add-zed-lisp-acceptance"},
+    {"obligation": "ob-6.4", "primary": "add-zed-lisp-acceptance"},
+    {"obligation": "ob-6.5", "primary": "integration:integ-03-release-readiness"},
+    {"obligation": "ob-req-source-verify", "primary": "add-llsp-host-context", "supporting": "add-lispico-runtime-core-catalogs"},
+    {"obligation": "ob-req-no-effects", "primary": "add-llsp-host-context", "supporting": "add-lispico-dialect-analyzer-checker"},
+    {"obligation": "ob-req-snapshot-capture", "primary": "add-yagel-host-profile"},
+    {"obligation": "ob-req-snapshot-consume", "primary": "add-llsp-host-context", "supporting": "add-yagel-host-profile"}
+  ],
+  "dependencies": [
+    {"from": "add-lispico-dialect-analyzer-checker", "to": "add-lispico-runtime-core-catalogs", "type": "artifact-versioned", "reason": "Dialect library identity, CL aliases/adapters, and macro sets in the analyzer are read from the published runtime catalogs; the analyzer must not restate them."},
+    {"from": "add-zhk-host-profile", "to": "add-lispico-runtime-core-catalogs", "type": "integrated", "reason": "The zhk host catalog adopts the declared-source fingerprint framing the runtime catalogs define, and is pinned alongside the core/stdlib/JSON catalogs it enables; both describe go-lispico v0.14.0, not a sibling checkout's HEAD."},
+    {"from": "add-yagel-host-profile", "to": "add-lispico-runtime-core-catalogs", "type": "integrated", "reason": "Same pinning constraint as zhk: Yagel host metadata and its snapshot provenance use the declared-source fingerprint framing of the runtime catalogs of the pinned v0.14.0 source tree."},
+    {"from": "add-yagel-host-profile", "to": "add-zhk-host-profile", "type": "integrated", "reason": "Both host profiles produce declared-source fingerprints under one shared contract; Yagel follows the zhk producer so the two hosts cannot diverge on canonical framing."},
+    {"from": "add-llsp-host-context", "to": "add-lispico-runtime-core-catalogs", "type": "integrated", "reason": "The consumer verifies the catalogs' declared source manifests and fingerprints; producer and verifier must agree on the canonical framing."},
+    {"from": "add-llsp-host-context", "to": "add-lispico-dialect-analyzer-checker", "type": "integrated", "reason": "Host-aware visibility, arity, phase, and provenance extend the same analysis module and diagnostic records rather than adding a second parser or checker."},
+    {"from": "add-llsp-host-context", "to": "add-zhk-host-profile", "type": "integrated", "reason": "Ordered route snapshots and shared-prelude uncertainty are derived from the zhk catalog and its declared loading order in the same server process."},
+    {"from": "add-llsp-host-context", "to": "add-yagel-host-profile", "type": "integrated", "reason": "Yagel layer overlays, logical pack keys, and installed-pack snapshot selection are consumed by the same snapshot loader that verifies catalog sources."},
+    {"from": "add-zed-lisp-acceptance", "to": "add-llsp-host-context", "type": "integrated", "reason": "Editor acceptance observes the host-aware responses of the migrated shared server; the shared-server migration in migrate-to-llsp is a prerequisite of that path, not a separate child."},
+    {"from": "add-zed-lisp-acceptance", "to": "add-yagel-host-profile", "type": "integrated", "reason": "Installed-pack snapshot keys and unreadable-winner behavior are only observable in the editor when the snapshot producer's bundle is available."}
+  ],
+  "integration": [
+    {
+      "id": "integ-01-baseline",
+      "check": "Re-prove the parent's already-completed repository work, which no child owns: bounded `make test` with its wall and worker limits, both Lispico query corpora plus Common Lisp regression fixtures, schema/config tests over the versioned project and catalog resources, server dispatch and configuration tests, and `scripts/check_package.py` over a locally built release archive. Confirm every shipped query compiles against the pinned grammar, that the Common Lisp suffix defaults are unchanged, and that a failing test and a timeout both fail the wrapper.",
+      "tree": "."
+    },
+    {
+      "id": "integ-02-host-approval",
+      "check": "Confirm that separately approved host changes exist in go-lispico, zhk, and Yagel owning metadata and profile snapshots, that each preserves its host's execution behavior, and that each describes the runtime version actually pinned by that checkout (v0.14.0) rather than a sibling checkout's HEAD. No child can prove the existence or approval status of these separate changes, and local stubs never substitute for them.",
+      "tree": "go-lispico:., zhk:., yagel:."
+    },
+    {
+      "id": "integ-03-release-readiness",
+      "check": "Run the bounded full integration checks and strict OpenSpec validation across the parent and every child, confirm each of the six capability deltas has recorded evidence, and confirm that no release readiness is claimed while any 2.x-4.x upstream task, the separate host-approval gate, or the shared-server migration gates are open. This also resolves interactions that no single child can prove: that editor acceptance used the same catalogs and snapshots the analyzer and checker consumed, and that Common Lisp behavior is unaffected by the Lispico additions.",
+      "tree": "."
+    }
+  ]
+}
