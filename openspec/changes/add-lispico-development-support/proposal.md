@@ -45,11 +45,13 @@ See [review](review.md) for evidence and [design](design.md) for boundaries, rol
 
 This change remains the capability-contract owner and integration umbrella. Its completed tasks remain historical evidence, not proof that upstream dependencies are finished.
 
-- [add-lispico-runtime-core-catalogs](../add-lispico-runtime-core-catalogs/proposal.md): original task 2.4; go-lispico owns runtime declarations.
-- [add-lispico-dialect-analyzer-checker](../add-lispico-dialect-analyzer-checker/proposal.md): original tasks 2.1–2.3 and 2.5; llsp owns analysis/checking with runtime parity fixtures.
-- [add-zhk-host-profile](../add-zhk-host-profile/proposal.md): original task 3.2 and the zhk portion of 3.4.
-- [add-yagel-host-profile](../add-yagel-host-profile/proposal.md): original task 3.3 and the Yagel portion of 3.4.
-- [add-llsp-host-context](../add-llsp-host-context/proposal.md): original tasks 4.1–4.6.
-- [add-zed-lisp-acceptance](../add-zed-lisp-acceptance/proposal.md): original tasks 6.1–6.4.
+The approved split is carried by six activation reservations, one per child change.
+
+- [add-lispico-runtime-core-catalogs](../add-lispico-runtime-core-catalogs/proposal.md): original task 2.4; go-lispico owns runtime declarations. Reservation: [add-lispico-runtime-core-catalogs.json](../../activation/add-lispico-runtime-core-catalogs.json).
+- [add-lispico-dialect-analyzer-checker](../add-lispico-dialect-analyzer-checker/proposal.md): original tasks 2.1–2.3 and 2.5; llsp owns analysis/checking with runtime parity fixtures. Reservation: [add-lispico-dialect-analyzer-checker.json](../../activation/add-lispico-dialect-analyzer-checker.json).
+- [add-zhk-host-profile](../add-zhk-host-profile/proposal.md): original task 3.2 and the zhk portion of 3.4. Reservation: [add-zhk-host-profile.json](../../activation/add-zhk-host-profile.json).
+- [add-yagel-host-profile](../add-yagel-host-profile/proposal.md): original task 3.3 and the Yagel portion of 3.4. Reservation: [add-yagel-host-profile.json](../../activation/add-yagel-host-profile.json).
+- [add-llsp-host-context](../add-llsp-host-context/proposal.md): original tasks 4.1–4.6. Reservation: [add-llsp-host-context.json](../../activation/add-llsp-host-context.json).
+- [add-zed-lisp-acceptance](../add-zed-lisp-acceptance/proposal.md): original tasks 6.1–6.4. Reservation: [add-zed-lisp-acceptance.json](../../activation/add-zed-lisp-acceptance.json).
 
 Original tasks 3.1 (separate upstream approval) and 6.5 (final readiness) remain open here. Child records do not duplicate capability deltas and do not authorize edits outside this repository. The parent cannot complete or archive until every dependency has real implementation evidence and integrated acceptance passes. Splitting work does not reduce the scope.
