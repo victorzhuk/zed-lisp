@@ -823,7 +823,10 @@ fn installed_pack_snapshot_contracts() {
 
     let mut unknown_root = valid.clone();
     unknown_root["extra"] = Value::Bool(true);
-    assert!(!schema.is_valid(&unknown_root), "unknown root fields are rejected");
+    assert!(
+        !schema.is_valid(&unknown_root),
+        "unknown root fields are rejected"
+    );
 
     let mut unknown_entry = valid.clone();
     unknown_entry["entries"][0]["line"] = Value::from(1);
@@ -844,7 +847,10 @@ fn installed_pack_snapshot_contracts() {
         .as_object_mut()
         .unwrap()
         .remove("digest");
-    assert!(!schema.is_valid(&pack_without_digest), "packs carry a digest");
+    assert!(
+        !schema.is_valid(&pack_without_digest),
+        "packs carry a digest"
+    );
 
     let mut empty_problem = valid.clone();
     empty_problem["problems"][0]["message"] = Value::from("");
