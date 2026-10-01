@@ -1,0 +1,23 @@
+# Proposal
+
+## Why
+
+The parent change `migrate-to-llsp` moves three language modes onto one shared `llsp` server entry, and its design names the evidence that would have to exist before anything is released: a real-server stdio run that proves a buffer's dialect survives a settings change with its dialect-specific diagnostics intact, and recorded actual Zed sessions covering the parts a protocol harness cannot see — worktree isolation, editor-side degradation when the server is missing, and error ranges over multibyte and supplementary Unicode.
+
+Nothing in the parent produces that evidence as a standalone, reviewable unit. Its section 4 rows are folded into one change alongside the cutover they are supposed to justify. That coupling has a concrete cost: an evidence run made against a partial registration, a surviving `lispico` or `sextant` entry, or the wrong server build proves nothing while still looking like proof.
+
+This child runs after the cutover lands as an explicitly unreleased development state and is the only place the acceptance evidence is produced. It may record partial proof while the external host-aware gate is still open, but G5 is not met until every required session — including host-aware isolation — is complete on the release candidate. It changes no extension behavior. It is the authoritative record of G5's real-server proof status and decides no other gate. It records what was observed.
+
+## What Changes
+
+- A real `llsp` binary is driven over stdio by a test harness that sends `initialize` without a language identifier, then `didOpen` per dialect identifier — `lisp`, `lispico-clojure`, `lispico-cl` — and then an accepted `workspace/didChangeConfiguration` per buffer, asserting two independent signals: the dialect is unchanged, and `lispico-cl` reader-invalid diagnostics are still published. Control dialects must not flip. One signal is not enough: diagnostics alone are empty for a clean file, and a dialect signal alone can be null for unrelated reasons.
+- A wrong or missing active candidate refuses the run before anything is driven; a correct candidate asserts live retention against the running server.
+- A separately named historical-negative invocation drives the same retention assertion against `v0.2.0` (`88e3e72`), resolved only from `LLSP_HISTORICAL_BINARY` with exact historical provenance, and succeeds only by observing the real assertion fail. A wrong or missing historical build fails that invocation; it never turns a skipped check into detector success. Its result is recorded apart from the current run and is never current acceptance evidence.
+- The same real server is exercised across the rest of the session lifecycle: unsaved edits that clear diagnostics without a save, save and reload, close and reopen, server restart, and two workspaces with different configurations in one session.
+- Actual Zed acceptance is recorded for all three modes: unsaved-buffer behavior, an error landing on the correct range over multibyte and supplementary Unicode, save/reload, restart, and two worktrees side by side with isolated results. Every session records the extension build, the server version and commit, the Zed version, the workspace, the actions performed, and the observed results.
+- Actual Zed acceptance with the server missing and then failing is recorded, showing structural editing usable in all three modes and the failure reported separately from any diagnostic result.
+- The acceptance record carries the current status of the upstream host-aware analysis gap, with its attributed baseline evidence and its historical state, as an open blocker where the attributed record says it is open. Passing ordinary sessions never imply host-aware parity and never approve reduced semantics.
+- The record states which registration and which pinned server build every observation came from, so the integration checks can confirm that acceptance ran against exactly what the cutover produced.
+- The record holds the authoritative statement of G5's real-server proof status; the other gate rows are links to their owning records, not local state copies.
+
+This child does not modify `extension.toml`, the resolution chain, the example settings, the schemas, the capability specs, the README, or the changelog; does not implement any host-context, catalog, library or phase behavior; does not clear any gate; and does not re-derive the gate baseline, the release contract, or the feasibility answer, each of which belongs to a sibling change. It reports the analysis gap as it stands; it does not resolve it.

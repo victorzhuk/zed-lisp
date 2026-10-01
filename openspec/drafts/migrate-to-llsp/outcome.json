@@ -1,0 +1,248 @@
+{
+  "version": 1,
+  "subject": "migrate-to-llsp",
+  "revision": "migrate-to-llsp@b311513487b34bc912193748310c7346f5faba4b93c76055f36ef4dc8a609047",
+  "split": "1b7d0129cdb1f5df5a533337700ba8e5249a07804998dd6affcfd66943089cf3",
+  "parentSource": {
+    "documentDigest": "b311513487b34bc912193748310c7346f5faba4b93c76055f36ef4dc8a609047",
+    "sourceSetDigest": "2563b112de196a38520e650c85148b366b842a970f6f25a3175ed5bd08f4175b"
+  },
+  "obligations": [
+    {"id": "ob-1.1", "acceptance": "Re-measure language-ID retention on the active pinned release and commit. Open a reader-invalid `.lisp` buffer with `languageId=lispico-cl`, record its dialect and diagnostics at didOpen, after one accepted settings change, after a second accepted settings change, after an ordinary edit that preserves the reader-invalid condition, and after restoring default_dialect. Record the lisp and lispico-clojure controls at the same stages. Record the observed result, including retention, loss, or recovery, without prescribing a failure. Preserve v0.2.0/88e3e72 loss and non-recovery only as historical evidence. G1 is met only when the current measurement satisfies the retention criterion; an incomplete or failing measurement does not meet G1."},
+    {"id": "ob-1.2", "acceptance": "The identifiers llsp declares for all three dialects are recorded from the dialects themselves, the shape Zed derives from a display name when no map is declared is recorded from the editor source, and which modes fail to match without an explicit map is recorded; the item is classified as a zed-lisp fix, not an upstream gate."},
+    {"id": "ob-1.3", "acceptance": "Enumerate the original missing context/catalog/library/phase requirements and their owning external work; preserve historical gaps, record current requirement-by-requirement status, and leave unmet work open without implementing it in this split."},
+    {"id": "ob-1.4", "acceptance": "One authoritative upstream record states and measures the language-ID retention guarantee and externally owned host-aware parity. It indexes separately authoritative G2 cutover, G4 feasibility, and G5 acceptance records. Parent and children link to those authorities; no child maintains a competing mutable gate-state copy and no llsp code is patched here."},
+    {"id": "ob-1.5", "acceptance": "The release contract is re-verified against the pinned release's published assets and `SHA256SUMS`: platform matrix (Linux x86_64/aarch64, macOS x86_64/aarch64, Windows x86_64), archive member layout, and digest coverage, with every platform that has no archive recorded."},
+    {"id": "ob-1.6", "acceptance": "Record the analysis gap on each measured pin. On v0.2.1 record unresolved_call defaulting off and the missing library/catalog-identity/phase analysis as blocking G3, not an approved reduction. A later closure requires attributed external completion and compatible verification of the original requirements."},
+    {"id": "ob-2.1", "acceptance": "A bounded probe records whether the WASM extension host can compute SHA-256 over a real multi-megabyte release archive before trusting its contents and then extract the published archive layout, naming the route tried and the observed result, with no hand-rolled primitive, no prescribed crate committed, and the failure mode recorded when it does not work."},
+    {"id": "ob-2.2", "acceptance": "A negative probe result returns the design for approval before any capability is added, any digest requirement is weakened to best-effort, or any dependency is committed."},
+    {"id": "ob-2.3", "acceptance": "Whether a user-supplied `files.associations` entry keeps a `.lisp` buffer's dialect across a settings change while the language-ID gate is open is observed and recorded as an optional user mitigation only; it is not a shipped setting, not an extension requirement, not documented as required, and not a substitute for the gate."},
+    {"id": "ob-2.4", "acceptance": "Whether llsp accepts a project-file initialization option is verified against the server's real configuration surface; if it does not, `lsp.lispico.initialization_options.project_file` is removed from the example settings and `schemas/lispico-project.schema.json`, `schemas/lispico-catalog.schema.json` and `schemas/lispico-packs.schema.json` are marked a reviewed migration gate by metadata-only edits that leave every validation keyword, `$id`, title, schema version, property, required field and reference unchanged, and no unsupported option is filtered out of the outgoing request."},
+    {"id": "ob-3.1", "acceptance": "In one change, `[language_servers.llsp]` is registered for all three languages with the explicit `language_ids` map, the previous `lispico` and `sextant` entries and their serving code paths are removed, a check fails when a language is registered without an explicit identifier and when a previous per-mode entry remains, and `scripts/check_package.py` plus the release packaging list cover whatever the manifest now needs; no shim, alias, fallback, parallel registration or reopen trick exists."},
+    {"id": "ob-3.2", "acceptance": "The `llsp` command resolves as configured binary, then `PATH`, then checksum-verified release download, with a version-named cache, per-entry completion state, pruning of stale versions, and offline reuse of a verified entry; a cache miss, including first installation, reaches verified download when reachable, and only an offline/unreachable cache miss or a specified installation failure stops with an error; every stopping condition returns an error naming the supported platforms, the reason and the three remedies, with no Roswell, source build, `install.sh` or alternate-platform substitution."},
+    {"id": "ob-3.3", "acceptance": "User arguments, environment, initialization options and workspace settings reach the server unchanged on every resolution path; nothing is wrapped, renamed, default-injected or suppressed, no buffer is reopened or the server restarted to force configuration through, and a configuration the server rejects is surfaced."},
+    {"id": "ob-3.4", "acceptance": "Behavior contract tests cover precedence, forwarding on each path, digest mismatch, extraction failure, interrupted-download state, non-executable cache entry, pruning, offline reuse with and without a usable entry, online first installation with an empty cache, unsupported platform and unknown server ID, each able to fail by a real defect rather than by a wiring-copy, length or non-empty assertion."},
+    {"id": "ob-3.5", "acceptance": "The dead sextant resolution code, cache layout and tests are deleted with no compatibility path, deprecation window or conditional on an old setting."},
+    {"id": "ob-3.6", "acceptance": "The example settings name the new server entry while preserving every display name, opt-in suffix semantic, snippet and grammar, and any `files.associations` observation is carried into `examples/README.md` only as an optional user mitigation while the gate is open."},
+    {"id": "ob-3.7", "acceptance": "Common Lisp recognition, highlighting, outline, text objects and settings surface are confirmed unchanged after the cutover, now served by the shared entry."},
+    {"id": "ob-3.8", "acceptance": "The cutover audits all predecessor amendments required by parent decision 5: server identities, merged launch requirements, conflicting no-download/Roswell wording, and analyzer/checker ownership. The audit maps each to the current canonical requirement and either proves the amendment already exists or authors the missing normative delta in migrate-to-llsp. The archived predecessor and every existing completion mark remain unchanged; semantic, context, catalog, library, phase, project-format, source-evidence, and data-ownership requirements are not reduced. The open parent's obsolete predecessor/baseline references and acceptance server identities are updated consistently."},
+    {"id": "ob-4.1", "acceptance": "A real llsp binary is driven over stdio: initialize, `didOpen` for `lisp`, `lispico-clojure` and `lispico-cl`, then an accepted `workspace/didChangeConfiguration` per buffer, asserting both that the dialect is unchanged and that `lispico-cl` reader-invalid diagnostics are still published; the identifier is sent on `didOpen` and never faked on `initialize`, and control dialects do not flip. A separate, explicitly named historical-negative invocation resolves `v0.2.0` (`88e3e72`) from its own binary path with verified provenance and drives the same retention assertion, succeeding only by observing the real assertion fail; a wrong or missing historical build fails that invocation. The historical result is attributed history and is never current acceptance evidence or a pass toward G1 or G5."},
+    {"id": "ob-4.2", "acceptance": "The same real server is exercised across unsaved edits that clear diagnostics without saving, save and reload, close and reopen, server restart, and two workspaces with different configurations in one session."},
+    {"id": "ob-4.3", "acceptance": "Actual Zed acceptance covers all three modes for unsaved-buffer behavior, multibyte and supplementary Unicode before an error landing on the correct range, save/reload, restart, and two worktrees side by side with isolated results, recording versions, actions and observed results."},
+    {"id": "ob-4.4", "acceptance": "Actual Zed acceptance shows that a missing or failing server leaves all three modes' structural editing usable and reports the failure separately."},
+    {"id": "ob-4.5", "acceptance": "Acceptance states the current G3/analysis status with evidence and historical gaps; passing ordinary sessions cannot imply host-aware parity or approve reduced semantics."},
+    {"id": "ob-5.1", "acceptance": "The existing README architecture and configuration sections describe the shared server, the resolution chain, the supported platforms and the gate-backed state read from each gate's authoritative current record - currently open limitations with their release consequence, and met gates as verified behavior, with superseded failures retained as labelled history - using only values verified against the pinned release and the real configuration surface; no CLI flag or endpoint is invented, and any `files.associations` note is an optional user mitigation while the gate is open."},
+    {"id": "ob-5.2", "acceptance": "The existing `CHANGELOG.md` gains one `[Unreleased]` entry describing the user-visible outcome of the current measured candidate, revised in place if gates change before close-out; no new changelog file is created."},
+    {"id": "ob-5.3", "acceptance": "The bounded full check suite and `openspec validate migrate-to-llsp --strict` both run clean before any archive is requested."},
+    {"id": "ob-5.4", "acceptance": "Archive only after all current gates, required acceptance, parent amendments, and tasks are complete. The already archived add-lispico-development-support is immutable baseline history, not an archive target. Archive the four no-delta implementation/evidence children in dependency order, archive migrate-to-llsp once to apply its authoritative llsp/common-lisp and any audited predecessor deltas, verify the resulting canonical requirements, then archive docs-release last. No competing requirement bodies, forced archive, or TBD purpose remains; evidence links resolve after archival."}
+  ],
+  "children": [
+    {
+      "slug": "migrate-to-llsp-upstream-gates",
+      "deliverable": "The recorded gate and version baseline: one upstream record authoritative for G1 and G3, stating what llsp must guarantee for language-ID retention across a settings-driven reload, holding the outcome-neutral current measurement of that guarantee on the pinned initial measurement `llsp:436bc84` - a pin that is the migration's initial measurement, not a perpetual release constraint - with the `v0.2.0` (`88e3e72`) failure preserved as attributed history distinct from the current outcome, the declared dialect identifiers and the derived-identifier shape recorded side by side, the host-aware parity requirements enumerated requirement by requirement against their owning external work, the release asset/`SHA256SUMS` contract (platform matrix, archive member layout, digest coverage, missing platforms) recorded, and the analysis gap recorded as blocking rather than as a reduction. It indexes the separately authoritative G2 cutover, G4 feasibility and G5 acceptance records, holds no mutable copy of their state, records the identity, completion evidence, released tag and artifact provenance of the external change plus any superseding measurement approved against a later pin, and patches no llsp code from this repository.",
+      "acceptance": "Every measurement carries the release and commit it was made on: the language-ID retention behavior is measured fresh and outcome-neutral against the pinned release with retention, loss and recovery all recorded as observed and the control dialects run through the same stages with each control's result recorded whether it passes or fails, a recorded control flip being a complete observation rather than an incomplete measurement, only a missing control making the measurement incomplete, and G1 decided from the retention criterion applied to that complete observation - retention plus both controls unflipped - rather than from an expectation that diagnostics disappear, so a recorded flip leaves G1 unmet without invalidating the measurement; the historical v0.2.0 failure is distinguished from the current outcome and no current row inherits it; the declared identifiers for all three dialects and Zed's derived fallback are read from their sources; the unsupported platform set is listed from the release assets; the host-context parity enumeration names each original missing requirement, its owning external work and its current status without conflating open migration tasks, immutable archived task evidence and unsatisfied canonical requirements; the analysis gap is recorded on each measured pin with the three missing lints named and is not presented as an approved reduction; external completion is recorded only with change identity, completion provenance, released tag and artifact provenance, and a superseding measurement is appended with the `v0.2.1` findings preserved; this record is the authority for G1 and G3 while G2, G4 and G5 are read from their own owning records; and the parent change points at this record.",
+      "scope": {
+        "files": [
+          "openspec/changes/migrate-to-llsp-upstream-gates/proposal.md",
+          "openspec/changes/migrate-to-llsp-upstream-gates/design.md",
+          "openspec/changes/migrate-to-llsp-upstream-gates/tasks.md",
+          "openspec/changes/migrate-to-llsp-upstream-gates/gates.md",
+          "openspec/changes/migrate-to-llsp/design.md"
+        ],
+        "dirs": ["openspec/changes/migrate-to-llsp-upstream-gates"],
+        "contracts": [
+          "migrate-to-llsp/tasks.md#1-gates--recorded-verified-blocking",
+          "migrate-to-llsp/design.md#gates-before-cutover",
+          "migrate-to-llsp/design.md#cross-repository-ownership",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-dialect-identity-is-stable-for-the-life-of-a-buffer",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-host-aware-release-gates",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-explicit-language-identifier-map-for-the-shared-server"
+        ],
+        "sourceRevision": "llsp:436bc84"
+      }
+    },
+    {
+      "slug": "migrate-to-llsp-host-feasibility",
+      "deliverable": "The bounded WASM-host feasibility answer for gate G4, authoritative in this change's own `feasibility.md` under Gate consequence: whether the extension host can compute SHA-256 over a real multi-megabyte release archive before trusting its contents and then extract the published archive layout safely, naming the route tried and its outcome, plus the two research-only findings the design defers to evidence - whether `files.associations` keeps a `.lisp` buffer's dialect across a settings change while the language-ID gate is open, and whether llsp accepts a project-file initialization option - and, when the option is unsupported, metadata-only annotations of `schemas/lispico-project.schema.json`, `schemas/lispico-catalog.schema.json` and `schemas/lispico-packs.schema.json` marking them a reviewed migration gate. No capability is added, no schema validation semantics change, and no dependency is committed by this child.",
+      "acceptance": "The probe runs against an actual published release archive, discards its output afterward, records the API surface used (`download_file` with its extraction support, or the absence of a hashing helper) and either the viable route or the failure mode; a negative result is escalated for design approval rather than converted into a best-effort digest; no crate lands in `Cargo.toml` without the repository's normal reviewed approval; the initialization-option answer names what llsp's real configuration surface accepts, the example settings follow from it, and when the option is unsupported the three named schema files carry exactly the recorded `$comment` plus the project schema's replaced `description` sentence with every validation keyword, `$id`, title, schema version, property, required field and reference preserved and every previously valid and invalid case still classified the same way through the existing schema-check path; G4's current result and dependency-approval state are written in `feasibility.md` only, with no state written into the baseline record; and the `files.associations` finding stays a recorded observation, never a shipped setting or a substitute for the language-ID gate.",
+      "scope": {
+        "files": [
+          "openspec/changes/migrate-to-llsp-host-feasibility/proposal.md",
+          "openspec/changes/migrate-to-llsp-host-feasibility/design.md",
+          "openspec/changes/migrate-to-llsp-host-feasibility/tasks.md",
+          "openspec/changes/migrate-to-llsp-host-feasibility/feasibility.md",
+          "examples/go-lispico/.zed/settings.json",
+          "examples/yagel/.zed/settings.json",
+          "examples/zhk/.zed/settings.json",
+          "schemas/lispico-project.schema.json",
+          "schemas/lispico-catalog.schema.json",
+          "schemas/lispico-packs.schema.json"
+        ],
+        "dirs": ["openspec/changes/migrate-to-llsp-host-feasibility"],
+        "contracts": [
+          "migrate-to-llsp/tasks.md#2-feasibility--before-any-dependency-tooling-or-code-decision",
+          "migrate-to-llsp/design.md#3-feasibility-first-digest-and-extraction-in-the-wasm-host",
+          "migrate-to-llsp/design.md#4-lispicojson-stays-a-reviewed-gate-not-a-shipped-option",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-llsp-binary-resolution-precedence",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-user-configuration-forwarding-on-every-path"
+        ],
+        "sourceRevision": "llsp:436bc84"
+      }
+    },
+    {
+      "slug": "migrate-to-llsp-cutover",
+      "deliverable": "The one atomic extension cutover landed as an explicitly unreleased development state under a separately recorded authorization, in a single change: a single `[language_servers.llsp]` registration for `Common Lisp`, `Lispico Clojure` and `Lispico CL` with the explicit `language_ids` map, the previous `lispico` and `sextant` entries and their code paths removed in the same change, the configured-binary -> `PATH` -> verified-cache -> checksum-verified-download resolution chain where a cache miss including first installation reaches verified download and only an offline/unreachable cache miss or a specified installation failure ends resolution, cache integrity, pruning and actionable error text, unchanged forwarding of arguments, environment, initialization options and workspace settings on every path, the behavior contract tests for all of it, the example settings retargeted while preserving every display name, opt-in suffix semantic, snippet and grammar, the audit of the archived predecessor's amendments against the current canonical capabilities with any still-missing normative amendment authored as a delta in the open parent, and the open parent's proposal/design/tasks corrected - no child-owned `specs/` delta, since the parent is the sole normative delta carrier for both capabilities and any audited predecessor amendment.",
+      "acceptance": "A recorded authorization explicitly admits the atomic unreleased cutover while G3 and G5 remain open, naming the active pin, a current passing G1 measurement, the verified identifiers and release contract and G4 met with its dependency approval; if it does not, implementation stays blocked, and no release tag, marketplace publication, release package publication or release-readiness claim is made until G1-G5 are met on compatible evidence. Registration, identifier map and removal of the old entries land together in one change that the packaging check and `scripts/check_package.py` cover, with a check failing when a registered language has no explicit identifier and when a previous per-mode entry remains; the design's Identifier-map evidence holds the build, the exact map, the packaging mutations and the dispatch evidence, and is the sole authoritative G2 record; resolution order cannot be reordered, a complete verified cache entry is reused with no network access, an empty cache with a reachable release reaches a verified first installation, and an unsupported platform, an offline or unreachable release listing, a digest mismatch or an extraction failure stops with the documented error; a partial, interrupted or non-executable cache entry is never started and stale version directories are pruned; forwarding assertions cover all four paths and a rejected initialization option surfaces as a configuration error; every behavior test can fail by a real defect; the Common Lisp experience is confirmed unchanged; the `files.associations` observation appears in `examples/README.md` only as an optional user mitigation while the gate is open; the amendment map covers all four predecessor amendment classes and either proves each already satisfied or authors the missing delta in the parent, with no archived predecessor document or completion mark altered and no semantic or evidence requirement reduced; and no `migrate-to-llsp-cutover/specs/` directory, no competing `MODIFIED` body, and no second `Custom server arguments pass-through` requirement exist.",
+      "scope": {
+        "files": [
+          "extension.toml",
+          "src/common_lisp.rs",
+          "src/tests.rs",
+          "scripts/check_package.py",
+          ".github/workflows/ci.yml",
+          "Makefile",
+          "examples/go-lispico/.zed/settings.json",
+          "examples/yagel/.zed/settings.json",
+          "examples/zhk/.zed/settings.json",
+          "examples/README.md",
+          "openspec/changes/migrate-to-llsp-cutover/proposal.md",
+          "openspec/changes/migrate-to-llsp-cutover/design.md",
+          "openspec/changes/migrate-to-llsp-cutover/tasks.md",
+          "openspec/changes/migrate-to-llsp-cutover/amendment.md",
+          "openspec/changes/migrate-to-llsp/tasks.md",
+          "openspec/changes/migrate-to-llsp/proposal.md",
+          "openspec/changes/migrate-to-llsp/design.md",
+          "openspec/changes/migrate-to-llsp/specs/lispico-language-server/spec.md",
+          "openspec/changes/migrate-to-llsp/specs/lispico-static-diagnostics/spec.md"
+        ],
+        "dirs": ["examples", "src", "openspec/changes/migrate-to-llsp-cutover"],
+        "contracts": [
+          "migrate-to-llsp/tasks.md#3-implementation--one-atomic-cutover",
+          "migrate-to-llsp/design.md#1-one-server-one-entry-explicit-identifiers",
+          "migrate-to-llsp/design.md#2-resolution-config--path--verified-download--actionable-error",
+          "migrate-to-llsp/design.md#5-the-parent-is-amended-not-rewritten",
+          "openspec/specs/lispico-language-server/spec.md#requirement-lispico-mode-isolation-from-ordinary-common-lisp",
+          "openspec/specs/lispico-static-diagnostics/spec.md#requirement-shared-editor-and-batch-results",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-single-shared-server-entry-for-all-three-language-modes",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-cache-integrity-and-pruning",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-offline-reuse-of-a-verified-cache",
+          "migrate-to-llsp/specs/common-lisp-language-server-integration/spec.md#requirement-language-server-declaration",
+          "migrate-to-llsp/specs/common-lisp-language-server-integration/spec.md#requirement-language-server-binary-resolution-precedence"
+        ],
+        "sourceRevision": "llsp:436bc84"
+      }
+    },
+    {
+      "slug": "migrate-to-llsp-acceptance",
+      "deliverable": "Acceptance evidence against the landed unreleased cutover from a real llsp binary and a real editor: a stdio harness that drives initialize, `didOpen` per dialect identifier and an accepted settings change while asserting both the dialect and its dialect-specific diagnostics, the remaining lifecycle sessions (unsaved edits, save/reload, close/reopen, restart, two workspaces with different configurations), recorded actual Zed sessions for all three modes covering Unicode ranges, restart, two worktrees and a missing or failing server, and a separately attributed historical-negative invocation against `v0.2.0` (`88e3e72`) that drives the same retention assertion and is never current acceptance evidence. The record is the authoritative statement of G5's real-server proof status and carries the current baseline-linked analysis status with its historical evidence.",
+      "acceptance": "The stdio run sends the identifier on `didOpen` and never on `initialize`, asserts that `lispico-cl` reader-invalid diagnostics survive the settings change as well as that the dialect is unchanged, confirms the control dialects do not flip, and refuses before driving anything when the active candidate is wrong or missing; the separately named historical invocation reads `LLSP_HISTORICAL_BINARY`, verifies `v0.2.0` (`88e3e72`) provenance, observes a real retention assertion failure rather than a launch or version error, and fails rather than skips when the historical build is wrong or missing, sharing the assertion path with the current run and never crediting G1 or G5; unsaved edits clear diagnostics without a save, save/reload, close/reopen, restart and two differently configured workspaces in one session are each observed; every Zed session records the extension, server and workspace versions, the actions performed and the observed results, including an error landing on the correct multibyte and supplementary-Unicode range and two worktrees with isolated results; the missing-server session shows structural editing still usable in all three modes; the analysis status is stated as the baseline record measures it on the active pin, with historical evidence visible, and passing ordinary sessions imply neither host-aware parity nor any approved reduction; and G5 evidence is complete only when every required session, host-aware isolation included, is complete on the active candidate, with the record linking G1/G3, G2 and G4 to their owning records and reporting contradictory evidence for remeasurement rather than editing it.",
+      "scope": {
+        "files": [
+          "tests/llsp_stdio.rs",
+          "tests/support/mod.rs",
+          "openspec/changes/migrate-to-llsp-acceptance/proposal.md",
+          "openspec/changes/migrate-to-llsp-acceptance/design.md",
+          "openspec/changes/migrate-to-llsp-acceptance/tasks.md",
+          "openspec/changes/migrate-to-llsp-acceptance/acceptance.md"
+        ],
+        "dirs": ["tests", "openspec/changes/migrate-to-llsp-acceptance"],
+        "contracts": [
+          "migrate-to-llsp/tasks.md#4-acceptance-proof--real-server-real-editor",
+          "migrate-to-llsp/design.md#verification",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-single-shared-server-entry-for-all-three-language-modes",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-dialect-identity-is-stable-for-the-life-of-a-buffer",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-host-aware-release-gates"
+        ],
+        "sourceRevision": "llsp:436bc84"
+      }
+    },
+    {
+      "slug": "migrate-to-llsp-docs-release",
+      "deliverable": "Documentation and release close-out for the migration: the existing README architecture and configuration sections rewritten for the shared server, the resolution chain and the supported platform list, with gate-backed limitations reported from each gate's authoritative current record - open ones stated with their release consequence, met ones described as verified behavior and superseded ones retained as labelled history; one `[Unreleased]` entry in the existing `CHANGELOG.md` describing the current measured candidate and revised in place if gates change; the bounded full check suite and strict OpenSpec validation run clean; and, once every gate and required acceptance item is met and the implementation, evidence and pre-archive tasks of the parent and of every child are complete - the archive operations and the post-archive verification being what that readiness authorizes rather than what it requires - ordinary validated change archives of the four no-delta evidence children in dependency order, one archive of the open parent applying both capability deltas together with any audited predecessor amendments, a semantic verification of the resulting canonical requirements and of every evidence link, and only then this change's own archive last as the close-out record. The parent and the five child change directories are archive-operation targets only, with evidence links relocated as needed; `openspec/specs/` is archive output rather than manual editing scope.",
+      "acceptance": "Every documented value - platforms, asset names, `SHA256SUMS` entry, configuration surface - traces to the authoritative record that owns it and names the release its measurement came from, with no invented flag or endpoint and `files.associations` presented only as an optional user mitigation while the gate is open; no limitation is asserted as currently open that its owning record does not carry as open, and no gate must remain open; the changelog gains exactly one entry describing the current measured candidate, revised rather than duplicated if gates change before close-out, and no new changelog file appears; the bounded full check suite and `openspec validate migrate-to-llsp --strict` are both clean before archive is requested, and passing checks clear no gate; the archived predecessor is neither re-archived nor edited and its completion marks stand; archive readiness is the completion of every implementation, evidence and pre-archive task of the parent and of each child, with the archive operations and the post-archive verification excluded because they are what readiness authorizes, not what it requires; archival then runs in the recorded change order with no `--skip-specs`, no `--no-validate`, no force and no archive command taking a capability name - the four no-delta children first, then the parent once, then a semantic check that the common-lisp declaration names only llsp with the exact three-ID map, that resolution is configured path, `PATH` and verified download with verified offline reuse and no Roswell, source or install-script fallback, that exactly one `Custom server arguments pass-through` requirement carries the parent's authoritative body, that no Code label formatting remains, that the llsp capability carries every parent `ADDED` requirement including forwarding, rejection and the host-aware release gates, that any canonical predecessor amendment preserves its full semantic scenarios, that both capability purposes are written with no `TBD`, and that every evidence link resolves after archival; this change is archived last, once and only once, only after that verification has passed, as the close-out record.",
+      "scope": {
+        "files": [
+          "README.md",
+          "CHANGELOG.md",
+          "examples/README.md",
+          "openspec/changes/migrate-to-llsp-docs-release/proposal.md",
+          "openspec/changes/migrate-to-llsp-docs-release/design.md",
+          "openspec/changes/migrate-to-llsp-docs-release/tasks.md"
+        ],
+        "dirs": [
+          "openspec/specs",
+          "openspec/changes/migrate-to-llsp-docs-release",
+          "openspec/changes/migrate-to-llsp",
+          "openspec/changes/migrate-to-llsp-upstream-gates",
+          "openspec/changes/migrate-to-llsp-host-feasibility",
+          "openspec/changes/migrate-to-llsp-cutover",
+          "openspec/changes/migrate-to-llsp-acceptance"
+        ],
+        "contracts": [
+          "migrate-to-llsp/tasks.md#5-documentation-and-release",
+          "migrate-to-llsp/design.md#6-archive-shape",
+          "migrate-to-llsp/specs/llsp-language-server-integration/spec.md#requirement-release-archive-selection",
+          "migrate-to-llsp/specs/common-lisp-language-server-integration/spec.md#removed_requirements"
+        ]
+      }
+    }
+  ],
+  "coverage": [
+    {"obligation": "ob-1.1", "primary": "migrate-to-llsp-upstream-gates"},
+    {"obligation": "ob-1.2", "primary": "migrate-to-llsp-upstream-gates"},
+    {"obligation": "ob-1.3", "primary": "integration:integ-01-gate-release-baseline", "supporting": "migrate-to-llsp-upstream-gates"},
+    {"obligation": "ob-1.4", "primary": "migrate-to-llsp-upstream-gates"},
+    {"obligation": "ob-1.5", "primary": "migrate-to-llsp-upstream-gates"},
+    {"obligation": "ob-1.6", "primary": "migrate-to-llsp-upstream-gates"},
+    {"obligation": "ob-2.1", "primary": "migrate-to-llsp-host-feasibility"},
+    {"obligation": "ob-2.2", "primary": "migrate-to-llsp-host-feasibility"},
+    {"obligation": "ob-2.3", "primary": "migrate-to-llsp-host-feasibility"},
+    {"obligation": "ob-2.4", "primary": "integration:integ-02-verified-server-surfaces", "supporting": "migrate-to-llsp-host-feasibility"},
+    {"obligation": "ob-3.1", "primary": "migrate-to-llsp-cutover"},
+    {"obligation": "ob-3.2", "primary": "migrate-to-llsp-cutover"},
+    {"obligation": "ob-3.3", "primary": "migrate-to-llsp-cutover"},
+    {"obligation": "ob-3.4", "primary": "migrate-to-llsp-cutover"},
+    {"obligation": "ob-3.5", "primary": "migrate-to-llsp-cutover"},
+    {"obligation": "ob-3.6", "primary": "migrate-to-llsp-cutover"},
+    {"obligation": "ob-3.7", "primary": "migrate-to-llsp-cutover"},
+    {"obligation": "ob-3.8", "primary": "migrate-to-llsp-cutover"},
+    {"obligation": "ob-4.1", "primary": "migrate-to-llsp-acceptance"},
+    {"obligation": "ob-4.2", "primary": "migrate-to-llsp-acceptance"},
+    {"obligation": "ob-4.3", "primary": "migrate-to-llsp-acceptance"},
+    {"obligation": "ob-4.4", "primary": "migrate-to-llsp-acceptance"},
+    {"obligation": "ob-4.5", "primary": "migrate-to-llsp-acceptance"},
+    {"obligation": "ob-5.1", "primary": "migrate-to-llsp-docs-release"},
+    {"obligation": "ob-5.2", "primary": "migrate-to-llsp-docs-release"},
+    {"obligation": "ob-5.3", "primary": "integration:integ-03-release-readiness"},
+    {"obligation": "ob-5.4", "primary": "migrate-to-llsp-docs-release", "supporting": "migrate-to-llsp-acceptance"}
+  ],
+  "dependencies": [
+    {"from": "migrate-to-llsp-host-feasibility", "to": "migrate-to-llsp-upstream-gates", "type": "artifact-versioned", "reason": "Feasibility consumes an attributed immutable release-facts snapshot; it writes G4 only in its own authoritative record. A changed active pin invalidates incompatible findings and requires a superseding compatible answer."},
+    {"from": "migrate-to-llsp-cutover", "to": "migrate-to-llsp-upstream-gates", "type": "integrated", "reason": "Consumes the current baseline and verified identifiers/release contract; G1 is met before authorized unreleased implementation. G3 remains an external release blocker and G5 follows implementation, so neither is a precondition for landing the unreleased cutover."},
+    {"from": "migrate-to-llsp-cutover", "to": "migrate-to-llsp-host-feasibility", "type": "integrated", "reason": "The digest-before-extraction step in the resolution chain is the mechanism the probe settles on; a negative probe answer returns the design for approval, G4 must be met with its dependency approved before the cutover lands, and the cutover does not proceed on a weakened digest requirement. Shared settings edits are ordered first by feasibility."},
+    {"from": "migrate-to-llsp-acceptance", "to": "migrate-to-llsp-cutover", "type": "integrated", "reason": "Every acceptance session runs against the landed unreleased atomic build; a partial registration or a surviving old entry would make the evidence meaningless, and no child may produce it before the cutover lands."},
+    {"from": "migrate-to-llsp-acceptance", "to": "migrate-to-llsp-upstream-gates", "type": "integrated", "reason": "The acceptance sessions record observed results for the very requirements the baseline re-verifies (dialect identity across a settings reload, host-aware release gates), and they run against the release pinned here rather than the parent's v0.2.0 table. A cites current G1/G3 authority and reports contradictory evidence for remeasurement rather than changing it."},
+    {"from": "migrate-to-llsp-acceptance", "to": "migrate-to-llsp-host-feasibility", "type": "integrated", "reason": "G5 release evidence must use a candidate covered by the current G4/configuration findings; a superseding feasibility answer on a new pin requires the acceptance evidence to be re-measured against it before it supports a release claim."},
+    {"from": "migrate-to-llsp-docs-release", "to": "migrate-to-llsp-upstream-gates", "type": "integrated", "reason": "Release documentation must consume the superseding active baseline after external G3 completion, not an obsolete snapshot: the documented platforms, resolution chain and currently gate-backed limitations are read from the gate's authoritative current record and compared by attribution."},
+    {"from": "migrate-to-llsp-docs-release", "to": "migrate-to-llsp-cutover", "type": "integrated", "reason": "README architecture and configuration text describe the landed single entry and resolution order; the docs and the extension must not disagree about the server name or the chain, and the cutover's amendment map is what the archival readiness check reads."},
+    {"from": "migrate-to-llsp-docs-release", "to": "migrate-to-llsp-acceptance", "type": "integrated", "reason": "The user-visible entry and the gate limitations are written from observed acceptance results and the current analysis status they attribute, so a release note cannot claim a capability no session observed."},
+    {"from": "migrate-to-llsp-docs-release", "to": "migrate-to-llsp-host-feasibility", "type": "integrated", "reason": "The release sequence archives the feasibility child's change after it completes, and the documented resolution chain, supported surfaces and dependency approval are written from that child's recorded route and settings decision rather than a restated one."}
+  ],
+  "integration": [
+    {
+      "id": "integ-01-gate-release-baseline",
+      "check": "Resolve every gate through the authority map - G1 and G3 from upstream-gates' gates.md current attributed measurement, G2 from cutover/design.md Identifier-map evidence, G4 from feasibility.md Gate consequence, G5 from acceptance.md Real-server proof status - and reject any stale or mismatched snapshot that does not name its source revision or disagrees with its owning record. Check the language-ID gate against the baseline child's fresh, outcome-neutral measurement: the observation is recorded as observed, and G1 is decided from the retention criterion rather than from an expectation that diagnostics disappear. Confirm the identifier-map item is classified as a repository-side fix. Confirm the host-aware parity gate is unmet upstream on the attributed historical pins it was measured on, and that the gap is owned by the separate llsp-side change so no child here implements catalog, host-profile, layer or phase behavior; for the current assessment, read the baseline record's attributed completion and superseding remeasurement evidence: while no attributed external completion and compatible remeasurement exist, the current state is unmet and any unmet required analysis is blocking rather than an accepted reduction, and once that evidence exists assess the current state from it rather than from the historical pins, with requirement-by-requirement coverage still validated. No child can prove on its own that the still-open parent requirements belong to that separate change rather than to this one.",
+      "tree": "."
+    },
+    {
+      "id": "integ-02-verified-server-surfaces",
+      "check": "Prove the release and configuration surfaces are one description: the asset names, `SHA256SUMS` entry, archive member layout and supported-platform list that the cutover selects and the documentation states are the ones the baseline verified against the pinned release, and the digest-before-extraction route the cutover implements is the route the probe recorded. On the initialization-option answer, require the feasibility configuration finding, the unfiltered outgoing request in either branch and the documentation to agree, with no unsupported option filtered out on the user's behalf. Branch on the verified option finding the feasibility child records: when the option is unsupported, require the template removal or retarget together with the metadata annotation of `schemas/lispico-project.schema.json`, `schemas/lispico-catalog.schema.json` and `schemas/lispico-packs.schema.json`, unchanged schema validation behavior and classification of existing valid and invalid cases; when the option is supported, verify that the option removal and the annotation are both absent as recorded, requiring no schema edit. On resolution, check that both a complete verified cache entry is reused with no network access and an empty cache with a reachable release reaches a verified first installation.",
+      "tree": "."
+    },
+    {
+      "id": "integ-03-release-readiness",
+      "check": "Require a recorded unreleased authorization explicitly admitting the atomic development cutover, the same active candidate across baseline, cutover, acceptance and documentation, G1-G5 met on compatible evidence and completed acceptance before any release tag, publication or archive; passing checks alone are not admission. Run the bounded full check suite and `openspec validate migrate-to-llsp --strict` across the parent and every child, confirm both capability deltas have recorded evidence, and require the amendment map to cover all four predecessor amendment classes with retained semantics compared against the canonical and archived sources. Require separately attributed positive and historical-negative acceptance records and verify the historical evidence credits no current gate. Confirm the changelog and README name no capability absent from the acceptance record, that any currently unmet required analysis blocks and that its closure must carry external completion and compatible requirement evidence. After archive, assert semantically rather than by file existence: the common-lisp declaration names only llsp with the exact three-ID map; resolution is configured path, `PATH` and verified download with verified offline reuse and no Roswell, source or install-script fallback; exactly one `Custom server arguments pass-through` requirement exists carrying the parent's authoritative body; no Code label formatting remains; the llsp capability contains every parent `ADDED` requirement, including unchanged forwarding and rejection and the host-aware release gates; any canonical predecessor amendment preserves its full semantic scenarios; capability purposes are meaningful rather than `TBD`; and every evidence link resolves after archival.",
+      "tree": "."
+    }
+  ]
+}
