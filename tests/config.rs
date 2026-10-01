@@ -422,6 +422,12 @@ fn catalog_schema_rejects_invalid_entries_and_provenance() {
         "source_files entries reject drive-prefixed absolute paths"
     );
 
+    bad_path["source_files"][0] = Value::from("C:rel/src/a.lisp");
+    assert!(
+        !schema.is_valid(&bad_path),
+        "source_files entries reject drive-relative prefixes"
+    );
+
     bad_path["source_files"][0] = Value::from("src\\a.lisp");
     assert!(
         !schema.is_valid(&bad_path),

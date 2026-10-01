@@ -114,7 +114,7 @@
   "definitions": {
     "relative_path": {
       "type": "string",
-      "pattern": "^(?![A-Za-z]:/)(?:[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.{3,}[^/\\\\\\x00]*)(?:/(?:[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.{3,}[^/\\\\\\x00]*))*$",
+      "pattern": "^(?![A-Za-z]:)(?:[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.{3,}[^/\\\\\\x00]*)(?:/(?:[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.{3,}[^/\\\\\\x00]*))*$",
       "description": "Canonical relative path: `/` separators, no leading slash, no drive letter, no backslash, and no empty, `.`, or `..` segments. Segments starting with a dot are allowed when longer than two characters or followed by more input."
     },
     "entry": {
