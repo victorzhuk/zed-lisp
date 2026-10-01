@@ -41,7 +41,9 @@ schemas that validate them:
   `source_revision` and the `source_fingerprint`/`source_files` pair.
   `source_files` is a duplicate-free list of unique relative paths standing
   for the checkout `source_fingerprint` was computed over; it holds no
-  per-file digests. A `catalogs[]` reference may separately name a
+  per-file digests. The pairing is two-way — `source_files` and
+  `source_fingerprint` are either both present or both absent, never one
+  alone. A `catalogs[]` reference may separately name a
   `source_root` checkout to verify those paths against — a key the project
   schema has carried since 0.5.0.
 - `schemas/lispico-packs.schema.json` (version 1) documents the installed-pack
@@ -49,18 +51,25 @@ schemas that validate them:
   through the `snapshot` and `expected_fingerprint` pair. The templates ship
   no snapshot file, and nothing in the tree captures one yet. A pack's
   `digest` is an opaque store identity, deliberately unlike the prefixed
-  content fingerprints `source_digest` and `expected_fingerprint`: only
-  equality is defined for it.
+  digest `source_digest` of read file content: only equality is defined for
+  it.
 
 All three are draft-07 JSON Schemas; point your editor's JSON schema settings
 at the shipped copies or at the `$id` URLs.
 
 A packs layer selects either a live `root` or a locked `snapshot` with its
-`expected_fingerprint` — never both and never neither. Validating against the
+`expected_fingerprint` — never both and never neither. `expected_fingerprint`
+is a `sha256:`-prefixed lowercase digest over that document's raw JSON bytes,
+not over the source content the snapshot lists; the snapshot schema has no
+fingerprint property of its own, so whoever consumes the snapshot is what
+hashes the bytes it read.
+
+Validating against the
 schema only fixes the document's shape. No code yet reads a `source_root`
-checkout, derives a fingerprint, captures a snapshot, or recomputes a digest
-over raw payloads; host context resolution, snapshot ordering, and symlink-
-and race-safe reads are equally unwritten. That work belongs to go-lispico
+checkout, derives a fingerprint, captures a snapshot, or hashes a snapshot's
+raw bytes against an `expected_fingerprint` pin; host context resolution,
+snapshot ordering, and symlink- and race-safe reads are equally unwritten.
+That work belongs to go-lispico
 and the host projects. [llsp](https://github.com/victorzhuk/llsp) is a
 separate, future primary Lispico server; at its current 0.2.1 it implements
 none of it — including host contexts — and it is not a release of the

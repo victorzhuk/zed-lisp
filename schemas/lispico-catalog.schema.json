@@ -29,7 +29,7 @@
     "source_fingerprint": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$",
-      "description": "Prefixed SHA-256 content fingerprint of the verified source snapshot, so dirty development trees are not labeled as an unchanged release. Required whenever source_files is present."
+      "description": "Prefixed SHA-256 content fingerprint of the verified source snapshot, so dirty development trees are not labeled as an unchanged release. Paired with source_files: the two are either both present or both absent, never one alone."
     },
     "source_files": {
       "type": "array",
@@ -39,7 +39,7 @@
       "items": {
         "$ref": "#/definitions/relative_path"
       },
-      "description": "Verified source files as canonical relative POSIX path strings. Present only together with source_fingerprint."
+      "description": "Verified source files as canonical relative POSIX path strings. Paired with source_fingerprint: the two are either both present or both absent, never one alone."
     },
     "dialect": {
       "enum": ["cl", "clojure"],
@@ -100,7 +100,7 @@
       "then": {
         "required": ["source_fingerprint"]
       },
-      "description": "The path manifest is meaningful only when paired with the aggregate snapshot fingerprint."
+      "description": "The path manifest is meaningful only when paired with the aggregate snapshot fingerprint: source_files and source_fingerprint are both present or both absent."
     },
     {
       "if": {
@@ -108,7 +108,8 @@
       },
       "then": {
         "required": ["source_files"]
-      }
+      },
+      "description": "A fingerprint without its path manifest is equally meaningless; the pairing holds in both directions."
     }
   ],
   "definitions": {

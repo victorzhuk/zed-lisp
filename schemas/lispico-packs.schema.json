@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/victorzhuk/zed-lisp/master/schemas/lispico-packs.schema.json",
   "title": "Lispico installed-pack snapshot",
-  "description": "Version-1 inert snapshot of the packs a Lispico installation has materialized. The schema fixes only the closed shape of the document: which packs exist, which entries each selected, and the problems recorded while reading them. Sorting, digest recomputation, symlink- and race-safe reads, pack membership decisions, and live freshness checks are future typed-consumer work, not schema guarantees.",
+  "description": "Version-1 inert snapshot of the packs a Lispico installation has materialized. The schema fixes only the closed shape of the document: which packs exist, which entries each selected, and the problems recorded while reading them. Sorting, digest recomputation, symlink- and race-safe reads, pack membership decisions, and live freshness checks are future typed-consumer work, not schema guarantees. The document carries no fingerprint of its own: a project `expected_fingerprint` pins these raw JSON bytes, and the consumer is what hashes them.",
   "type": "object",
   "additionalProperties": false,
   "required": [
