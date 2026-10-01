@@ -360,6 +360,97 @@ fn catalog_schema_rejects_invalid_entries_and_provenance() {
     let mut empty_entries = valid.clone();
     empty_entries["entries"] = Value::from(Vec::<Value>::new());
     assert!(!schema.is_valid(&empty_entries));
+
+    let fingerprint = format!("sha256:{}", "a".repeat(64));
+    let paths: Vec<String> = (0..256).map(|i| format!("src/file{i}.lisp")).collect();
+    let mut pinned = valid.clone();
+    pinned["source_revision"] = Value::from("f9ce4a1");
+    pinned.as_object_mut().unwrap().remove("source_version");
+    pinned["source_fingerprint"] = Value::from(fingerprint.clone());
+    pinned["source_files"] = Value::from(paths.clone());
+    pinned["source_files"][0] = Value::from("dir/a:b.lisp");
+    pinned["source_files"][1] = Value::from("name:variant.lisp");
+    assert!(
+        schema.is_valid(&pinned),
+        "path-string source_files with colon segments are accepted"
+    );
+
+    let mut object_files = pinned.clone();
+    object_files["source_files"][0] =
+        serde_json::json!({ "path": "src/file0.lisp", "digest": fingerprint });
+    assert!(
+        !schema.is_valid(&object_files),
+        "source_files must be path strings, not objects"
+    );
+
+    let mut duplicate_files = pinned.clone();
+    duplicate_files["source_files"][1] = Value::from("dir/a:b.lisp");
+    assert!(
+        !schema.is_valid(&duplicate_files),
+        "duplicate source_files entries are rejected"
+    );
+
+    let mut too_many_files = pinned.clone();
+    too_many_files["source_files"] = Value::from(
+        (0..257)
+            .map(|i| Value::from(format!("src/file{i}.lisp")))
+            .collect::<Vec<_>>(),
+    );
+    assert!(
+        !schema.is_valid(&too_many_files),
+        "source_files is capped at 256 entries"
+    );
+
+    let mut no_files = pinned.clone();
+    no_files.as_object_mut().unwrap().remove("source_files");
+    assert!(
+        !schema.is_valid(&no_files),
+        "source_fingerprint without source_files is rejected"
+    );
+
+    let mut unprefixed_fingerprint = pinned.clone();
+    unprefixed_fingerprint["source_fingerprint"] = Value::from("a".repeat(64));
+    assert!(
+        !schema.is_valid(&unprefixed_fingerprint),
+        "source_fingerprint must carry the sha256: prefix"
+    );
+
+    let mut bad_path = pinned.clone();
+    bad_path["source_files"][0] = Value::from("C:/abs/src/a.lisp");
+    assert!(
+        !schema.is_valid(&bad_path),
+        "source_files entries reject drive-prefixed absolute paths"
+    );
+
+    bad_path["source_files"][0] = Value::from("src\\a.lisp");
+    assert!(
+        !schema.is_valid(&bad_path),
+        "source_files entries reject backslash separators"
+    );
+
+    bad_path["source_files"][0] = Value::from("src/./a.lisp");
+    assert!(
+        !schema.is_valid(&bad_path),
+        "source_files entries reject dot segments"
+    );
+
+    bad_path["source_files"][0] = Value::from("src/../a.lisp");
+    assert!(
+        !schema.is_valid(&bad_path),
+        "source_files entries reject parent segments"
+    );
+
+    bad_path["source_files"][0] = Value::from("src/a.lisp/");
+    assert!(
+        !schema.is_valid(&bad_path),
+        "source_files entries reject trailing separators"
+    );
+
+    bad_path["source_files"][0] = Value::from("src/\u{0}");
+    assert!(
+        !schema.is_valid(&bad_path),
+        "source_files entries reject NUL bytes"
+    );
 }
 
 #[test]
@@ -521,9 +612,8 @@ fn source_manifest_contracts() {
     );
 
     let mut with_manifest = base.clone();
-    with_manifest["source_fingerprint"] = Value::from(digest.clone());
-    with_manifest["source_files"] =
-        serde_json::json!([{ "path": "src/core.lisp", "digest": digest }]);
+    with_manifest["source_fingerprint"] = Value::from(format!("sha256:{digest}"));
+    with_manifest["source_files"] = Value::from(vec!["src/core.lisp"]);
     assert!(
         schema.is_valid(&with_manifest),
         "a complete source manifest is valid"
@@ -537,7 +627,7 @@ fn source_manifest_contracts() {
     );
 
     let mut fingerprint_only = base.clone();
-    fingerprint_only["source_fingerprint"] = Value::from(digest.clone());
+    fingerprint_only["source_fingerprint"] = Value::from(format!("sha256:{digest}"));
     assert!(
         !schema.is_valid(&fingerprint_only),
         "source_fingerprint requires source_files"
@@ -547,14 +637,15 @@ fn source_manifest_contracts() {
     bad_fingerprint["source_fingerprint"] = Value::from("not-a-sha256");
     assert!(
         !schema.is_valid(&bad_fingerprint),
-        "source_fingerprint must be a lowercase sha256"
+        "source_fingerprint must be a prefixed lowercase sha256"
     );
 
-    let mut bad_digest = with_manifest.clone();
-    bad_digest["source_files"][0]["digest"] = Value::from("A".repeat(64));
+    let mut object_files = with_manifest.clone();
+    object_files["source_files"][0] =
+        serde_json::json!({ "path": "src/core.lisp", "digest": digest });
     assert!(
-        !schema.is_valid(&bad_digest),
-        "source digests must be lowercase sha256"
+        !schema.is_valid(&object_files),
+        "source_files must be path strings, not objects"
     );
 
     for path in [
@@ -570,7 +661,7 @@ fn source_manifest_contracts() {
         "nul\u{0}byte.lisp",
     ] {
         let mut malformed = with_manifest.clone();
-        malformed["source_files"][0]["path"] = Value::from(path);
+        malformed["source_files"][0] = Value::from(path);
         assert!(
             !schema.is_valid(&malformed),
             "non-canonical source path {path:?} is accepted"
@@ -578,7 +669,7 @@ fn source_manifest_contracts() {
     }
 
     let mut unicode = with_manifest.clone();
-    unicode["source_files"][0]["path"] = Value::from("источники/ядро.lisp");
+    unicode["source_files"][0] = Value::from("источники/ядро.lisp");
     assert!(
         schema.is_valid(&unicode),
         "a canonical Unicode relative path is valid"
@@ -587,9 +678,7 @@ fn source_manifest_contracts() {
     let mut full = with_manifest.clone();
     full["source_files"] = Value::from(
         (0..256)
-            .map(|index| {
-                serde_json::json!({ "path": format!("src/file{index}.lisp"), "digest": digest })
-            })
+            .map(|index| Value::from(format!("src/file{index}.lisp")))
             .collect::<Vec<_>>(),
     );
     assert!(
@@ -601,17 +690,14 @@ fn source_manifest_contracts() {
     overfull["source_files"]
         .as_array_mut()
         .unwrap()
-        .push(serde_json::json!({ "path": "src/extra.lisp", "digest": digest }));
+        .push(Value::from("src/extra.lisp"));
     assert!(
         !schema.is_valid(&overfull),
         "257 source files exceeds the limit"
     );
 
     let mut duplicate = with_manifest.clone();
-    duplicate["source_files"] = Value::from(vec![
-        serde_json::json!({ "path": "src/core.lisp", "digest": digest }),
-        serde_json::json!({ "path": "src/core.lisp", "digest": digest }),
-    ]);
+    duplicate["source_files"] = Value::from(vec!["src/core.lisp", "src/core.lisp"]);
     assert!(
         !schema.is_valid(&duplicate),
         "duplicate source entries are rejected"
@@ -857,6 +943,23 @@ fn installed_pack_snapshot_contracts() {
     assert!(
         !schema.is_valid(&empty_problem),
         "problem messages are non-empty"
+    );
+
+    let mut readable_without_digest = valid.clone();
+    readable_without_digest["entries"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("source_digest");
+    assert!(
+        !schema.is_valid(&readable_without_digest),
+        "readable entries must carry a source digest"
+    );
+
+    let mut unreadable_with_digest = unreadable.clone();
+    unreadable_with_digest["entries"][0]["source_digest"] = Value::from(digest.clone());
+    assert!(
+        !schema.is_valid(&unreadable_with_digest),
+        "unreadable entries must not claim a source digest"
     );
 }
 

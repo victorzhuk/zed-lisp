@@ -33,7 +33,7 @@
   "definitions": {
     "relative_path": {
       "type": "string",
-      "pattern": "^(?:[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.{3,}[^/:\\\\\\x00]*)(?:/(?:[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.{3,}[^/:\\\\\\x00]*))*$",
+      "pattern": "^(?![A-Za-z]:/)(?:[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.{3,}[^/\\\\\\x00]*)(?:/(?:[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/\\\\\\x00]*|\\.{3,}[^/\\\\\\x00]*))*$",
       "description": "Canonical relative path: `/` separators, no leading slash, no drive letter, no backslash, and no empty, `.`, or `..` segments."
     },
     "glob": {
@@ -69,8 +69,8 @@
         },
         "expected_fingerprint": {
           "type": "string",
-          "minLength": 1,
-          "description": "Additionally pins a development snapshot's source fingerprint."
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Additionally pins a development snapshot's prefixed SHA-256 source fingerprint."
         },
         "source_root": {
           "type": "string",
