@@ -459,7 +459,8 @@ fn catalog_schema_rejects_invalid_entries_and_provenance() {
     );
 
     let project_schema = read_json(project_root().join("schemas/lispico-project.schema.json"));
-    let project_schema = jsonschema::validator_for(&project_schema).expect("project schema must compile");
+    let project_schema =
+        jsonschema::validator_for(&project_schema).expect("project schema must compile");
     let catalog = |fingerprint: Value| {
         serde_json::json!({
             "schema_version": 2,
