@@ -291,19 +291,13 @@ fn project_templates_validate_against_the_schema() {
 }
 
 #[test]
-fn shipped_catalog_schema_compiles() {
-    let schema = read_json(project_root().join("schemas/lispico-catalog.schema.json"));
-    jsonschema::validator_for(&schema).expect("catalog schema must compile");
-}
-
-#[test]
 fn catalog_schema_rejects_invalid_entries_and_provenance() {
     let schema = read_json(project_root().join("schemas/lispico-catalog.schema.json"));
     let schema = jsonschema::validator_for(&schema).expect("catalog schema must compile");
 
     let valid: Value = serde_json::from_str(
         r#"{
-        "schema_version": 1,
+        "schema_version": 2,
         "owner": "go-lispico",
         "source_version": "0.3.0",
         "dialect": "clojure",
@@ -375,7 +369,7 @@ fn project_schema_rejects_unknown_and_invalid_configuration() {
 
     let base: Value = serde_json::from_str(
         r#"{
-        "schema_version": 1,
+        "schema_version": 2,
         "contexts": [
             {
                 "name": "a",
@@ -398,7 +392,7 @@ fn project_schema_rejects_unknown_and_invalid_configuration() {
     );
 
     let mut bad_version = base.clone();
-    bad_version["schema_version"] = Value::from(2);
+    bad_version["schema_version"] = Value::from(3);
     assert!(
         !schema.is_valid(&bad_version),
         "unsupported schema versions must be rejected"
@@ -449,7 +443,7 @@ fn project_schema_rejects_unknown_and_invalid_configuration() {
 
     let valid_zhk: Value = serde_json::from_str(
         r#"{
-        "schema_version": 1,
+        "schema_version": 2,
         "contexts": [
             {
                 "name": "a",
@@ -497,6 +491,366 @@ fn project_schema_rejects_unknown_and_invalid_configuration() {
     assert!(
         schema.is_valid(&catalog_only),
         "catalog-only provenance (no source_root) is valid"
+    );
+}
+
+#[test]
+fn source_manifest_contracts() {
+    let schema = read_json(project_root().join("schemas/lispico-catalog.schema.json"));
+    let schema = jsonschema::validator_for(&schema).expect("catalog schema must compile");
+
+    let digest = "a".repeat(64);
+    let base: Value = serde_json::from_str(
+        r#"{
+        "schema_version": 2,
+        "owner": "go-lispico",
+        "source_version": "0.3.0",
+        "dialect": "clojure",
+        "library": "core",
+        "entries": [
+            { "name": "map", "kind": "function", "cell": "value" },
+            { "name": "pi", "kind": "value", "cell": "value" }
+        ]
+    }"#,
+    )
+    .unwrap();
+
+    assert!(
+        schema.is_valid(&base),
+        "a catalog without a source manifest is valid"
+    );
+
+    let mut with_manifest = base.clone();
+    with_manifest["source_fingerprint"] = Value::from(digest.clone());
+    with_manifest["source_files"] =
+        serde_json::json!([{ "path": "src/core.lisp", "digest": digest }]);
+    assert!(
+        schema.is_valid(&with_manifest),
+        "a complete source manifest is valid"
+    );
+
+    let mut files_only = base.clone();
+    files_only["source_files"] = with_manifest["source_files"].clone();
+    assert!(
+        !schema.is_valid(&files_only),
+        "source_files requires source_fingerprint"
+    );
+
+    let mut fingerprint_only = base.clone();
+    fingerprint_only["source_fingerprint"] = Value::from(digest.clone());
+    assert!(
+        !schema.is_valid(&fingerprint_only),
+        "source_fingerprint requires source_files"
+    );
+
+    let mut bad_fingerprint = with_manifest.clone();
+    bad_fingerprint["source_fingerprint"] = Value::from("not-a-sha256");
+    assert!(
+        !schema.is_valid(&bad_fingerprint),
+        "source_fingerprint must be a lowercase sha256"
+    );
+
+    let mut bad_digest = with_manifest.clone();
+    bad_digest["source_files"][0]["digest"] = Value::from("A".repeat(64));
+    assert!(
+        !schema.is_valid(&bad_digest),
+        "source digests must be lowercase sha256"
+    );
+
+    for path in [
+        "/absolute/core.lisp",
+        "back\\slash.lisp",
+        "C:/drive.lisp",
+        "./relative.lisp",
+        "src/./core.lisp",
+        "src//core.lisp",
+        "src/core.lisp/",
+        "..",
+        "src/../core.lisp",
+        "nul\u{0}byte.lisp",
+    ] {
+        let mut malformed = with_manifest.clone();
+        malformed["source_files"][0]["path"] = Value::from(path);
+        assert!(
+            !schema.is_valid(&malformed),
+            "non-canonical source path {path:?} is accepted"
+        );
+    }
+
+    let mut unicode = with_manifest.clone();
+    unicode["source_files"][0]["path"] = Value::from("источники/ядро.lisp");
+    assert!(
+        schema.is_valid(&unicode),
+        "a canonical Unicode relative path is valid"
+    );
+
+    let mut full = with_manifest.clone();
+    full["source_files"] = Value::from(
+        (0..256)
+            .map(|index| {
+                serde_json::json!({ "path": format!("src/file{index}.lisp"), "digest": digest })
+            })
+            .collect::<Vec<_>>(),
+    );
+    assert!(
+        schema.is_valid(&full),
+        "256 source files is the accepted maximum"
+    );
+
+    let mut overfull = full.clone();
+    overfull["source_files"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({ "path": "src/extra.lisp", "digest": digest }));
+    assert!(
+        !schema.is_valid(&overfull),
+        "257 source files exceeds the limit"
+    );
+
+    let mut duplicate = with_manifest.clone();
+    duplicate["source_files"] = Value::from(vec![
+        serde_json::json!({ "path": "src/core.lisp", "digest": digest }),
+        serde_json::json!({ "path": "src/core.lisp", "digest": digest }),
+    ]);
+    assert!(
+        !schema.is_valid(&duplicate),
+        "duplicate source entries are rejected"
+    );
+
+    let mut cl_same_name = base.clone();
+    cl_same_name["dialect"] = Value::from("cl");
+    cl_same_name["entries"] = Value::from(vec![
+        serde_json::json!({ "name": "map", "kind": "function", "cell": "function" }),
+        serde_json::json!({ "name": "map", "kind": "function", "cell": "value" }),
+    ]);
+    assert!(
+        schema.is_valid(&cl_same_name),
+        "cl catalogs may hold function- and value-cell entries under one name"
+    );
+
+    let mut clojure_function = base.clone();
+    clojure_function["entries"][0]["cell"] = Value::from("function");
+    assert!(
+        !schema.is_valid(&clojure_function),
+        "clojure catalogs resolve through the value cell only"
+    );
+}
+
+#[test]
+fn packs_layer_selection_contracts() {
+    let schema = read_json(project_root().join("schemas/lispico-project.schema.json"));
+    let schema = jsonschema::validator_for(&schema).expect("project schema must compile");
+
+    let fingerprint = "b".repeat(64);
+
+    let context_with = |layers: Value| {
+        serde_json::json!({
+            "schema_version": 2,
+            "contexts": [{
+                "name": "rules",
+                "files": ["rules/**/*.clj"],
+                "dialect": "clojure",
+                "profile": "yagel-rule",
+                "layers": layers
+            }]
+        })
+    };
+
+    assert!(
+        schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "embedded" },
+            { "kind": "packs", "root": "packs" },
+            { "kind": "project", "root": "rules" }
+        ]))),
+        "a live packs root is a valid selection"
+    );
+
+    assert!(
+        schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "packs", "snapshot": "packs/snapshot.json", "expected_fingerprint": fingerprint }
+        ]))),
+        "a locked snapshot selection is valid"
+    );
+
+    assert!(
+        !schema.is_valid(&context_with(serde_json::json!([{ "kind": "packs" }]))),
+        "a packs layer with neither root nor snapshot is rejected"
+    );
+
+    assert!(
+        !schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "packs", "root": "packs", "snapshot": "packs/snapshot.json", "expected_fingerprint": fingerprint }
+        ]))),
+        "root and the snapshot pair are mutually exclusive"
+    );
+
+    assert!(
+        !schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "packs", "root": "packs", "snapshot": "packs/snapshot.json" }
+        ]))),
+        "root cannot be combined with a snapshot"
+    );
+
+    assert!(
+        !schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "packs", "snapshot": "packs/snapshot.json" }
+        ]))),
+        "a snapshot requires its expected fingerprint"
+    );
+
+    assert!(
+        !schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "packs", "expected_fingerprint": fingerprint }
+        ]))),
+        "an expected fingerprint requires its snapshot"
+    );
+
+    assert!(
+        !schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "global", "root": "vendor", "snapshot": "packs/snapshot.json" }
+        ]))),
+        "only packs layers may select a snapshot"
+    );
+
+    assert!(
+        !schema.is_valid(&context_with(serde_json::json!([
+            { "kind": "embedded", "expected_fingerprint": fingerprint }
+        ]))),
+        "only packs layers may pin a snapshot fingerprint"
+    );
+}
+
+#[test]
+fn installed_pack_snapshot_contracts() {
+    let schema = read_json(project_root().join("schemas/lispico-packs.schema.json"));
+    let schema = jsonschema::validator_for(&schema).expect("packs schema must compile");
+
+    let digest = "c".repeat(64);
+    let valid: Value = serde_json::from_str(&format!(
+        r#"{{
+        "schema_version": 1,
+        "source_revision": "f9ce4a1",
+        "selection_generation": "v2",
+        "packs": [{{ "name": "memory", "digest": "opaque:abc" }}],
+        "entries": [
+            {{ "key": "rules/memory.clj", "pack": "memory", "status": "readable", "source": "rules/memory.clj", "source_digest": "{digest}" }}
+        ],
+        "problems": [{{ "message": "skipped", "pack": "memory", "key": "rules/other.clj" }}]
+    }}"#
+    ))
+    .unwrap();
+    assert!(schema.is_valid(&valid), "a complete snapshot is valid");
+
+    let empty: Value = serde_json::from_str(
+        r#"{
+        "schema_version": 1,
+        "source_revision": "f9ce4a1",
+        "selection_generation": "v2",
+        "packs": [],
+        "entries": [],
+        "problems": []
+    }"#,
+    )
+    .unwrap();
+    assert!(
+        schema.is_valid(&empty),
+        "an empty v2-generation pack set is valid"
+    );
+
+    for field in [
+        "schema_version",
+        "source_revision",
+        "selection_generation",
+        "packs",
+        "entries",
+        "problems",
+    ] {
+        let mut missing = valid.clone();
+        missing.as_object_mut().unwrap().remove(field);
+        assert!(!schema.is_valid(&missing), "root field {field} is required");
+    }
+
+    let mut bad_generation = valid.clone();
+    bad_generation["selection_generation"] = Value::from("v3");
+    assert!(
+        !schema.is_valid(&bad_generation),
+        "unknown selection generations are rejected"
+    );
+
+    let mut readable_without_source = valid.clone();
+    readable_without_source["entries"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("source");
+    assert!(
+        !schema.is_valid(&readable_without_source),
+        "readable entries carry their source path"
+    );
+
+    let mut bad_source_digest = valid.clone();
+    bad_source_digest["entries"][0]["source_digest"] = Value::from("short");
+    assert!(
+        !schema.is_valid(&bad_source_digest),
+        "readable entries carry a lowercase sha256 digest"
+    );
+
+    let mut bad_source_path = valid.clone();
+    bad_source_path["entries"][0]["source"] = Value::from("/abs/rules/memory.clj");
+    assert!(
+        !schema.is_valid(&bad_source_path),
+        "entry sources are canonical relative paths"
+    );
+
+    let unreadable: Value = serde_json::json!({
+        "schema_version": 1,
+        "source_revision": "f9ce4a1",
+        "selection_generation": "v1",
+        "packs": [],
+        "entries": [{ "key": "rules/broken.clj", "pack": "memory", "status": "unreadable" }],
+        "problems": [{ "message": "unreadable" }]
+    });
+    assert!(
+        schema.is_valid(&unreadable),
+        "unreadable entries omit source information"
+    );
+
+    let mut unreadable_with_source = unreadable.clone();
+    unreadable_with_source["entries"][0]["source"] = Value::from("rules/broken.clj");
+    assert!(
+        !schema.is_valid(&unreadable_with_source),
+        "unreadable entries must not claim a source"
+    );
+
+    let mut unknown_root = valid.clone();
+    unknown_root["extra"] = Value::Bool(true);
+    assert!(!schema.is_valid(&unknown_root), "unknown root fields are rejected");
+
+    let mut unknown_entry = valid.clone();
+    unknown_entry["entries"][0]["line"] = Value::from(1);
+    assert!(
+        !schema.is_valid(&unknown_entry),
+        "unknown entry fields are rejected"
+    );
+
+    let mut unknown_problem = valid.clone();
+    unknown_problem["problems"][0]["severity"] = Value::from("warn");
+    assert!(
+        !schema.is_valid(&unknown_problem),
+        "unknown problem fields are rejected"
+    );
+
+    let mut pack_without_digest = valid.clone();
+    pack_without_digest["packs"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("digest");
+    assert!(!schema.is_valid(&pack_without_digest), "packs carry a digest");
+
+    let mut empty_problem = valid.clone();
+    empty_problem["problems"][0]["message"] = Value::from("");
+    assert!(
+        !schema.is_valid(&empty_problem),
+        "problem messages are non-empty"
     );
 }
 

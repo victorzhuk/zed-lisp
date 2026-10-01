@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/victorzhuk/zed-lisp/master/schemas/lispico-packs.schema.json",
+  "title": "Lispico installed-pack snapshot",
+  "description": "Version-1 inert snapshot of the packs a Lispico installation has materialized. The schema fixes only the closed shape of the document: which packs exist, which entries each selected, and the problems recorded while reading them. Sorting, digest recomputation, symlink- and race-safe reads, pack membership decisions, and live freshness checks are future typed-consumer work, not schema guarantees.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_revision",
+    "selection_generation",
+    "packs",
+    "entries",
+    "problems"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Supported snapshot schema version."
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Source revision the snapshot was taken at."
+    },
+    "selection_generation": {
+      "enum": ["v1", "v2"],
+      "description": "Layer-selection generation the snapshot was produced under."
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/pack"
+      },
+      "description": "Installed packs. An empty set is valid for a v2-generation installation with no packs."
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/entry"
+      },
+      "description": "Files selected from installed packs, in no guaranteed order."
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/problem"
+      },
+      "description": "Problems recorded while reading the packs; presence never invalidates the snapshot."
+    }
+  },
+  "definitions": {
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "digest"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pack name."
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque pack digest; only equality is defined."
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "pack", "status"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pack-relative file identity."
+        },
+        "pack": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the pack the entry was selected from."
+        },
+        "status": {
+          "enum": ["readable", "unreadable"],
+          "description": "Whether the file content could be read when the snapshot was taken."
+        },
+        "source": {
+          "$ref": "#/definitions/relative_path",
+          "description": "Pack-relative source path. Required for readable entries, forbidden for unreadable ones."
+        },
+        "source_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Lowercase SHA-256 digest of the read content. Required for readable entries, forbidden for unreadable ones."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": { "const": "readable" }
+            }
+          },
+          "then": {
+            "required": ["source", "source_digest"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": { "const": "unreadable" }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["source"] },
+                { "required": ["source_digest"] }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message"],
+      "properties": {
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable problem description."
+        },
+        "pack": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pack the problem belongs to, when known."
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pack-relative entry the problem belongs to, when known."
+        }
+      }
+    },
+    "relative_path": {
+      "type": "string",
+      "pattern": "^(?:[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.{3,}[^/:\\\\\\x00]*)(?:/(?:[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.{3,}[^/:\\\\\\x00]*))*$",
+      "description": "Canonical relative path: `/` separators, no leading slash, no drive letter, no backslash, and no empty, `.`, or `..` segments."
+    }
+  }
+}

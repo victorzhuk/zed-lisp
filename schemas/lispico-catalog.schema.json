@@ -2,13 +2,13 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/victorzhuk/zed-lisp/master/schemas/lispico-catalog.schema.json",
   "title": "Lispico declaration catalog",
-  "description": "Version-1 inert declaration catalog for Go-defined Lispico symbols. Catalogs are non-executable data: they describe host and library symbols with verified facts only. Unknown signature or type information must remain absent — never replace it with invented varargs. Actual Lisp source remains the authority for its own definitions.",
+  "description": "Version-2 inert declaration catalog for Go-defined Lispico symbols. Catalogs are non-executable data: they describe host and library symbols with verified facts only. Unknown signature or type information must remain absent — never replace it with invented varargs. Actual Lisp source remains the authority for its own definitions.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "owner", "dialect", "library", "entries"],
   "properties": {
     "schema_version": {
-      "const": 1,
+      "const": 2,
       "description": "Supported catalog schema version."
     },
     "owner": {
@@ -28,8 +28,17 @@
     },
     "source_fingerprint": {
       "type": "string",
-      "minLength": 1,
-      "description": "Content fingerprint of the verified source snapshot, so dirty development trees are not labeled as an unchanged release."
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Content fingerprint of the verified source snapshot, so dirty development trees are not labeled as an unchanged release. Required whenever source_files is present."
+    },
+    "source_files": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/definitions/source_file"
+      },
+      "description": "Per-file fingerprints of the verified source snapshot. Present only together with source_fingerprint."
     },
     "dialect": {
       "enum": ["cl", "clojure"],
@@ -82,9 +91,46 @@
         }
       },
       "description": "Lisp-1 (clojure) dialects resolve every symbol through the value cell only."
+    },
+    {
+      "if": {
+        "required": ["source_files"]
+      },
+      "then": {
+        "required": ["source_fingerprint"]
+      },
+      "description": "Per-file source fingerprints are meaningful only with the snapshot fingerprint."
+    },
+    {
+      "if": {
+        "required": ["source_fingerprint"]
+      },
+      "then": {
+        "required": ["source_files"]
+      }
     }
   ],
   "definitions": {
+    "relative_path": {
+      "type": "string",
+      "pattern": "^(?:[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.{3,}[^/:\\\\\\x00]*)(?:/(?:[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.{3,}[^/:\\\\\\x00]*))*$",
+      "description": "Canonical relative path: `/` separators, no leading slash, no drive letter, no backslash, and no empty, `.`, or `..` segments. Segments starting with a dot are allowed when longer than two characters or followed by more input."
+    },
+    "source_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "digest"],
+      "properties": {
+        "path": {
+          "$ref": "#/definitions/relative_path"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Lowercase SHA-256 digest of the verified file content."
+        }
+      }
+    },
     "entry": {
       "type": "object",
       "additionalProperties": false,

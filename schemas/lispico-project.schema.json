@@ -2,13 +2,13 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/victorzhuk/zed-lisp/master/schemas/lispico-project.schema.json",
   "title": "Lispico project configuration",
-  "description": "Version-1 declarative configuration for the Lispico language server and checker. Place as `.lispico.json` at the worktree root, or select a different file with the server's `project_file` initialization option. All relative paths resolve from the containing file's directory. File globs use `/` as the separator, `*` within a path segment, and `**` across segments; excludes win over inclusions, and every executable source file must match exactly one context. The configuration is never executed and no ancestor or home-directory scan is performed.",
+  "description": "Version-2 declarative configuration for the Lispico language server and checker. Place as `.lispico.json` at the worktree root, or select a different file with the server's `project_file` initialization option. All relative paths resolve from the containing file's directory. File globs use `/` as the separator, `*` within a path segment, and `**` across segments; excludes win over inclusions, and every executable source file must match exactly one context. The configuration is never executed and no ancestor or home-directory scan is performed.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "contexts"],
   "properties": {
     "schema_version": {
-      "const": 1,
+      "const": 2,
       "description": "Supported configuration schema version."
     },
     "runtime_version": {
@@ -31,6 +31,11 @@
     }
   },
   "definitions": {
+    "relative_path": {
+      "type": "string",
+      "pattern": "^(?:[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.{3,}[^/:\\\\\\x00]*)(?:/(?:[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.\\.[^.:/\\\\\\x00][^/:\\\\\\x00]*|\\.{3,}[^/:\\\\\\x00]*))*$",
+      "description": "Canonical relative path: `/` separators, no leading slash, no drive letter, no backslash, and no empty, `.`, or `..` segments."
+    },
     "glob": {
       "type": "string",
       "minLength": 1,
@@ -228,7 +233,16 @@
         "root": {
           "type": "string",
           "minLength": 1,
-          "description": "Layer source root, relative to this configuration file. Required for packs, global, and project; forbidden for embedded."
+          "description": "Layer source root, relative to this configuration file. Required for global and project; packs layers choose either `root` (live directory) or the locked snapshot pair."
+        },
+        "snapshot": {
+          "$ref": "#/definitions/relative_path",
+          "description": "Installed-pack snapshot document path, relative to this configuration file. Packs layers only: allowed only together with expected_fingerprint, and forbidden together with root."
+        },
+        "expected_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected SHA-256 fingerprint of the snapshot's verified source content. Packs layers only: pins the selected snapshot and is forbidden on other layer kinds."
         }
       },
       "allOf": [
@@ -236,7 +250,7 @@
           "if": {
             "properties": {
               "kind": {
-                "enum": ["packs", "global", "project"]
+                "enum": ["global", "project"]
               }
             }
           },
@@ -255,6 +269,52 @@
           "then": {
             "not": {
               "required": ["root"]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "packs"
+              }
+            }
+          },
+          "then": {
+            "oneOf": [
+              {
+                "required": ["root"],
+                "not": {
+                  "anyOf": [
+                    { "required": ["snapshot"] },
+                    { "required": ["expected_fingerprint"] }
+                  ]
+                }
+              },
+              {
+                "required": ["snapshot", "expected_fingerprint"],
+                "not": {
+                  "required": ["root"]
+                }
+              }
+            ]
+          },
+          "description": "A packs layer is either a live root directory or a locked snapshot with its expected fingerprint — never both, never neither."
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": ["embedded", "global", "project"]
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["snapshot"] },
+                { "required": ["expected_fingerprint"] }
+              ]
             }
           }
         }
