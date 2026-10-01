@@ -100,7 +100,7 @@
       "then": {
         "required": ["source_fingerprint"]
       },
-      "description": "Per-file source fingerprints are meaningful only with the snapshot fingerprint."
+      "description": "The path manifest is meaningful only when paired with the aggregate snapshot fingerprint."
     },
     {
       "if": {

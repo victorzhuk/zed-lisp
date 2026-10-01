@@ -75,7 +75,7 @@
         "source_root": {
           "type": "string",
           "minLength": 1,
-          "description": "Optional checkout used to verify the catalog's declared source-file fingerprints; without it the catalog is verified as catalog-only provenance."
+          "description": "Optional checkout the tooling recomputes the catalog's aggregate source fingerprint over its declared path manifest in; without it the catalog is verified as catalog-only provenance."
         }
       },
       "oneOf": [
@@ -223,7 +223,7 @@
     },
     "layer": {
       "type": "object",
-      "description": "One Yagel overlay layer. `embedded` reads the runtime's embedded sources; the other kinds read `root`. Later layers shadow earlier ones; a winning unreadable or invalid file never falls back to a lower layer.",
+      "description": "One Yagel overlay layer. `embedded` reads the runtime's embedded sources; `global` and `project` are source-root kinds that read `root`; a `packs` layer is either a live `root` directory or a pinned snapshot with its expected fingerprint — never both, never neither. Later layers shadow earlier ones; a winning unreadable or invalid file never falls back to a lower layer.",
       "additionalProperties": false,
       "required": ["kind"],
       "properties": {

@@ -457,6 +457,40 @@ fn catalog_schema_rejects_invalid_entries_and_provenance() {
         !schema.is_valid(&bad_path),
         "source_files entries reject NUL bytes"
     );
+
+    let project_schema = read_json(project_root().join("schemas/lispico-project.schema.json"));
+    let project_schema = jsonschema::validator_for(&project_schema).expect("project schema must compile");
+    let catalog = |fingerprint: Value| {
+        serde_json::json!({
+            "schema_version": 2,
+            "contexts": [{
+                "name": "a",
+                "files": ["src/**/*.lisp"],
+                "dialect": "clojure",
+                "profile": "runtime"
+            }],
+            "catalogs": [{
+                "path": "vendor/catalog.json",
+                "owner": "zhk",
+                "expected_revision": "f9ce4a1",
+                "expected_fingerprint": fingerprint
+            }]
+        })
+    };
+    assert!(
+        project_schema.is_valid(&catalog(Value::from(format!("sha256:{}", "a".repeat(64))))),
+        "a prefixed expected_fingerprint is a valid catalog pin"
+    );
+    for bad in [
+        Value::from("a".repeat(64)),
+        Value::from(format!("sha256:{}", "A".repeat(64))),
+        Value::from(format!("sha256:{}", "a".repeat(63))),
+    ] {
+        assert!(
+            !project_schema.is_valid(&catalog(bad)),
+            "expected_fingerprint must be a prefixed lowercase sha256 digest"
+        );
+    }
 }
 
 #[test]
