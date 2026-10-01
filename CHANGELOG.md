@@ -9,8 +9,9 @@
 ### Changed
 
 - Move the project and declaration-catalog schemas to `schema_version: 2` and the three `examples/` templates with them. `source_fingerprint` is now a lowercase SHA-256 instead of any non-empty string, and a `packs` layer no longer requires `root`
-- Tighten the packaged-resource check to validate the new snapshot schema alongside the project and catalog schemas
-- Record what the schemas deliberately do not do. No code yet reads a `source_root` checkout, derives a fingerprint, captures an installed-pack snapshot, or recomputes a digest over raw payloads; host context resolution, snapshot ordering, and symlink- and race-safe reads are equally unwritten. That work belongs to go-lispico and the host projects, and [llsp](https://github.com/victorzhuk/llsp) 0.2.1 — the currently released `lispico-lsp` — implements none of it
+- Tighten the packaged-resource check to cover the new snapshot schema alongside the project and catalog schemas. The check asserts only that each declared resource is present and that each shipped schema parses as JSON; the test suite is what compiles and validates documents against the schemas
+- Record what the schemas deliberately do not do. No code yet reads a `source_root` checkout, derives a fingerprint, captures an installed-pack snapshot, or recomputes a digest over raw payloads; host context resolution, snapshot ordering, and symlink- and race-safe reads are equally unwritten. That work belongs to go-lispico and the host projects, and [llsp](https://github.com/victorzhuk/llsp) — a separate, future primary Lispico server whose 0.2.1 implements none of the schema-version-2 contracts, including host contexts, and which is not a release of the `lispico-lsp` binary the extension resolves — implements none of it
+- Correct the documentation of the `lispico` server prerequisite: the extension resolves a `lispico-lsp` binary you supply, and go-lispico is the runtime the modes and catalogs target rather than a shipped source of that legacy server
 
 ## 0.5.2 (2026-09-26)
 

@@ -47,7 +47,10 @@ schemas that validate them:
 - `schemas/lispico-packs.schema.json` (version 1) documents the installed-pack
   snapshot a `packs` layer can lock instead of reading a live directory,
   through the `snapshot` and `expected_fingerprint` pair. The templates ship
-  no snapshot file, and nothing in the tree captures one yet.
+  no snapshot file, and nothing in the tree captures one yet. A pack's
+  `digest` is an opaque store identity, deliberately unlike the prefixed
+  content fingerprints `source_digest` and `expected_fingerprint`: only
+  equality is defined for it.
 
 All three are draft-07 JSON Schemas; point your editor's JSON schema settings
 at the shipped copies or at the `$id` URLs.
@@ -58,13 +61,16 @@ schema only fixes the document's shape. No code yet reads a `source_root`
 checkout, derives a fingerprint, captures a snapshot, or recomputes a digest
 over raw payloads; host context resolution, snapshot ordering, and symlink-
 and race-safe reads are equally unwritten. That work belongs to go-lispico
-and the host projects, and [llsp](https://github.com/victorzhuk/llsp) 0.2.1,
-the currently released `lispico-lsp`, implements none of it.
+and the host projects. [llsp](https://github.com/victorzhuk/llsp) is a
+separate, future primary Lispico server; at its current 0.2.1 it implements
+none of it — including host contexts — and it is not a release of the
+`lispico-lsp` binary the extension resolves.
 
 ## Prerequisites
 
 Semantic features (completion, signatures, navigation, diagnostics)
-require the native `lispico-lsp` server from go-lispico and the catalogs
-each template references. Without them, structural editing, highlighting,
-outline, and text objects keep working and the missing dependency is
-reported once when a Lispico buffer opens.
+require an existing `lispico-lsp` binary that you supply yourself (the
+extension only resolves and launches it, and go-lispico does not ship it)
+plus the catalogs each template references. Without them, structural
+editing, highlighting, outline, and text objects keep working and the
+missing dependency is reported once when a Lispico buffer opens.

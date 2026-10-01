@@ -1,12 +1,12 @@
 # Common Lisp for Zed
 
-Common Lisp and Lispico language support for Zed: syntax highlighting, Tree-sitter powered parsing and structural editing, and language server integration via sextant (Common Lisp) or the native `lispico-lsp` server (Lispico dialects).
+Common Lisp and Lispico language support for Zed: syntax highlighting, Tree-sitter powered parsing and structural editing, and language server integration via sextant (Common Lisp) or a separately supplied `lispico-lsp` binary (Lispico dialects).
 
 ## Features
 
 - **Common Lisp** (`.lisp`, `.lsp`, `.cl`, `.asd`): syntax highlighting, bracket matching, auto-indentation, outline panel, and language server support via [sextant](https://github.com/victorzhuk/sextant).
 - **Lispico Clojure** and **Lispico CL** (opt-in): go-lispico dialect modes with dialect-correct highlighting, `()`/`[]`/`{}` structure (Clojure), list/reader-vector structure (CL), outline, text objects, and scoped snippets. They never claim file suffixes globally — selection happens through workspace `file_types` associations or manual language selection.
-- **Lispico language server** (`lispico`): completion, hover, signatures, navigation, and static diagnostics from the native go-lispico tooling, resolved independently of sextant.
+- **Lispico language server** (`lispico`): completion, hover, signatures, navigation, and static diagnostics from a `lispico-lsp` binary you supply, resolved independently of sextant.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ Make sure `~/.roswell/bin` is on your PATH.
 
 ### Lispico modes (`lispico-lsp`)
 
-The native Lispico language server and static checker are expected from [go-lispico](https://github.com/victorzhuk/go-lispico); the extension only resolves and launches a binary it never builds or downloads. The extension resolves them in this order and never falls back to sextant, Roswell, a download, or a build:
+The Lispico server is an existing `lispico-lsp` binary you supply yourself — the extension only resolves and launches it, and never builds or downloads it. The go-lispico runtime is a verified source of the Lispico runtime the modes and catalogs target, but it does not itself ship this legacy server binary, so there is nothing to install from it automatically. The extension resolves the binary in this order and never falls back to sextant, Roswell, a download, or a build:
 
 1. Configured binary path (Zed settings, `lsp.lispico.binary`)
 2. `lispico-lsp` on `PATH`
@@ -74,7 +74,7 @@ You can also select **Editor: Set Language** manually on any buffer.
 
 - [`schemas/lispico-project.schema.json`](schemas/lispico-project.schema.json) — `schema_version: 2`. Requires `schema_version` and a non-empty `contexts` array; each context names its `files` globs, `dialect` (`cl` or `clojure`), and host `profile` (`runtime`, `zhk`, `yagel-rule`, `yagel-workflow`). `prelude` belongs to the `zhk` profile, ordered `layers` to the Yagel profiles, and the `runtime` profile takes neither. A `catalogs[]` reference may name a `source_root` checkout used to verify that catalog's declared files — that key has been part of the schema since 0.5.0 and is unrelated to `source_files` below.
 - [`schemas/lispico-catalog.schema.json`](schemas/lispico-catalog.schema.json) — `schema_version: 2`. An inert declaration catalog pinned to exactly one of `source_version` or `source_revision`. `source_files` is a duplicate-free list of unique relative paths, accepted only together with the aggregate `source_fingerprint` it was derived from; the paths carry no per-file digests of their own.
-- [`schemas/lispico-packs.schema.json`](schemas/lispico-packs.schema.json) — `schema_version: 1`. The inert shape of an installed-pack snapshot: `packs`, the `entries` each pack contributed, and the `problems` recorded while reading them. A readable entry carries its pack-relative `source` and `source_digest`; an unreadable one carries neither. A `packs` layer selects either a live `root` or a locked `snapshot` with its `expected_fingerprint` — never both, never neither.
+- [`schemas/lispico-packs.schema.json`](schemas/lispico-packs.schema.json) — `schema_version: 1`. The inert shape of an installed-pack snapshot: `packs`, the `entries` each pack contributed, and the `problems` recorded while reading them. A pack's `digest` is an opaque store identity — only equality is defined, and it is deliberately not a content fingerprint. A readable entry carries its pack-relative `source` and `source_digest`; an unreadable one carries neither. A `packs` layer selects either a live `root` or a locked `snapshot` with its `expected_fingerprint` — never both, never neither.
 
 See the [examples README](examples/README.md) for a walkthrough.
 
@@ -82,7 +82,7 @@ The configuration is declarative and never executed. Relative paths resolve from
 
 #### What the schemas do not do
 
-The schemas fix document structure only. Nothing yet reads a `source_root` checkout, derives a `source_fingerprint` from a checkout, captures an installed-pack snapshot, or recomputes a digest over raw payloads. Host context resolution (`zhk` prelude, Yagel layers), snapshot ordering, and symlink- and race-safe filesystem reads are also unwritten. All of it belongs to go-lispico and the host projects. [llsp](https://github.com/victorzhuk/llsp) 0.2.1, the currently released `lispico-lsp`, implements none of it, so a configuration that validates still gets syntax-level Lispico support only until that work lands.
+The schemas fix document structure only. Nothing yet reads a `source_root` checkout, derives a `source_fingerprint` from a checkout, captures an installed-pack snapshot, or recomputes a digest over raw payloads. Host context resolution (`zhk` prelude, Yagel layers), snapshot ordering, and symlink- and race-safe filesystem reads are also unwritten. All of it belongs to go-lispico and the host projects. [llsp](https://github.com/victorzhuk/llsp) is a separate, future primary Lispico server — at its current 0.2.1 it implements none of the schema-version-2 contracts, including host contexts, and it is not a release of the `lispico-lsp` binary resolved above. A configuration that therefore validates still gets syntax-level Lispico support only until that work lands.
 
 ### Server settings
 
@@ -229,13 +229,13 @@ The extension is built as a WebAssembly module using the Zed extension API:
   - `lispico` (Lispico Clojure, Lispico CL): configured path → `lispico-lsp` on PATH → actionable error. No download, build, Roswell, or sextant fallback.
   - `sextant` (Common Lisp): configured path (with optional args/env) → PATH → prebuilt binary from the latest [sextant GitHub release](https://github.com/victorzhuk/sextant/releases) → Roswell build (`ros install victorzhuk/sextant`), then PATH lookup
 - **Tree-sitter grammars** — [tree-sitter-commonlisp](https://github.com/tree-sitter-grammars/tree-sitter-commonlisp) (pinned `3232350`) for Common Lisp, [tree-sitter-clojure](https://github.com/sogaiu/tree-sitter-clojure) (pinned `e43eff8`) for both Lispico modes; both are registered in `extension.toml` and vendored as pinned submodules for the test harness
-- **Verification** — `make test` parses the corpus fixtures from the three target projects plus Common Lisp regressions against the pinned grammars, compiles every shipped query, checks the templates and schemas, and validates the packaged resources (`scripts/check_package.py`)
+- **Verification** — `make test` parses the corpus fixtures from the three target projects plus Common Lisp regressions against the pinned grammars, compiles every shipped query, and validates the templates and schemas against them. The packaged-resource check (`scripts/check_package.py`, also runnable alone as `make check-package`) only asserts that each declared resource is present and that each shipped schema parses as JSON; the tests are what actually compile and validate against the schemas
 
 ## Links
 
 - [sextant](https://github.com/victorzhuk/sextant) — Common Lisp Language Server Protocol implementation
 - [go-lispico](https://github.com/victorzhuk/go-lispico) — the Lispico runtime the `Lispico` modes and their declaration catalogs target
-- [llsp](https://github.com/victorzhuk/llsp) — the `lispico-lsp` language server; release 0.2.1 implements none of the schema-version-2 contracts
+- [llsp](https://github.com/victorzhuk/llsp) — a separate, future primary Lispico language server, not a release of the `lispico-lsp` binary resolved above; at 0.2.1 it implements none of the schema-version-2 contracts
 - [tree-sitter-commonlisp](https://github.com/tree-sitter-grammars/tree-sitter-commonlisp) — Tree-sitter grammar for Common Lisp
 - [tree-sitter-clojure](https://github.com/sogaiu/tree-sitter-clojure) — structural grammar used by the Lispico modes
 - [Roswell](https://github.com/roswell/roswell) — Common Lisp environment setup utility
