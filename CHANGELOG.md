@@ -1,5 +1,15 @@
 ## Unreleased
 
+### Added
+
+- Add `schemas/lispico-packs.schema.json` for the installed-pack snapshot a `packs` layer locks instead of reading a live directory, and let a `packs` layer select either a live `root` or a `snapshot` with its `expected_fingerprint` — never both, never neither
+- Add per-file source provenance to the declaration catalog schema: `source_fingerprint` and `source_files` are required together, and a catalog entry may name a `source_root` checkout used to verify declared file fingerprints
+
+### Changed
+
+- Migrate `.lispico.json` and the declaration catalogs to `schema_version: 2`, and the three `examples/` templates with them: contexts now require a `dialect` and a `profile`, `prelude` belongs to the `zhk` profile, ordered `layers` to the Yagel profiles, and the `runtime` profile takes neither
+- Record that the schemas fix document structure only. Catalog `source_root` verification, host contexts, installed-pack capture, snapshot ordering, digest recomputation over raw payloads, and symlink- and race-safe filesystem reads remain consumer and producer work, and `llsp` 0.2.1 implements none of them
+
 ## 0.5.2 (2026-09-26)
 
 - Fix sextant server resolution to reuse a previously downloaded binary when the network is unavailable, and remove partial or non-executable downloads so they cannot poison later cache lookups

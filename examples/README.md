@@ -29,11 +29,34 @@ server.
 
 ## Configuration schema
 
-`schemas/lispico-project.schema.json` documents and validates
-`.lispico.json`; `schemas/lispico-catalog.schema.json` documents the
-declaration catalogs referenced by `catalogs`. Both are draft-07 JSON
-Schemas; point your editor's JSON schema settings at the shipped copies or
-at the `$id` URLs.
+All three shipped templates use `schema_version: 2`. The extension ships the
+schemas that validate them:
+
+- `schemas/lispico-project.schema.json` (version 2) documents and validates
+  `.lispico.json`: contexts with their `files` globs, `dialect`, and
+  `profile`; the `prelude` a `zhk` context orders, and the `layers` a Yagel
+  context overlays.
+- `schemas/lispico-catalog.schema.json` (version 2) documents the declaration
+  catalogs referenced by `catalogs`, including the `source_version` or
+  `source_revision` and the optional `source_fingerprint`/`source_files`
+  provenance pair. A catalog entry may name a `source_root` checkout used to
+  verify declared file fingerprints; without it the catalog is verified as
+  catalog-only provenance.
+- `schemas/lispico-packs.schema.json` (version 1) documents the installed-pack
+  snapshot a `packs` layer can lock instead of reading a live directory,
+  through the `snapshot` and `expected_fingerprint` pair. The templates ship
+  no snapshot file; capture and refresh belong to the host tooling.
+
+All three are draft-07 JSON Schemas; point your editor's JSON schema settings
+at the shipped copies or at the `$id` URLs.
+
+A packs layer selects either a live `root` or a locked `snapshot` with its
+`expected_fingerprint` — never both and never neither. Validating against the
+schema only fixes the document's shape: the `source_root` verification, host
+context resolution, installed-pack capture, snapshot ordering, digest
+recomputation over raw payloads, and symlink- and race-safe filesystem reads
+are consumer and producer work still owed by go-lispico and the host projects.
+The current `llsp` 0.2.1 release implements none of them.
 
 ## Prerequisites
 
