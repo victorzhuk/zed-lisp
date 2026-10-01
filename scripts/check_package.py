@@ -132,7 +132,11 @@ def main() -> None:
             if not snippet.get("body"):
                 fail(f"{path}: snippet {prefix!r} has an empty body")
 
-    for schema in ("lispico-project.schema.json", "lispico-catalog.schema.json"):
+    for schema in (
+        "lispico-project.schema.json",
+        "lispico-catalog.schema.json",
+        "lispico-packs.schema.json",
+    ):
         path = ROOT / "schemas" / schema
         try:
             json.loads(path.read_text())
