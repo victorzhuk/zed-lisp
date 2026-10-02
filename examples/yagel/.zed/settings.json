@@ -6,12 +6,5 @@
     "Lispico Clojure": {
       "language_servers": ["lispico"]
     }
-  },
-  "lsp": {
-    "lispico": {
-      "initialization_options": {
-        "project_file": ".lispico.json"
-      }
-    }
   }
 }

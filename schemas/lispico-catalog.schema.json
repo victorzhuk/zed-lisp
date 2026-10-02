@@ -2,6 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/victorzhuk/zed-lisp/master/schemas/lispico-catalog.schema.json",
   "title": "Lispico declaration catalog",
+  "$comment": "Reviewed llsp migration gate: this portable context resource remains a required contract; consumption by the pinned llsp release is not verified unless recorded in migrate-to-llsp-host-feasibility/feasibility.md. This annotation does not change schema validation or approve reduced host-aware semantics.",
   "description": "Version-2 inert declaration catalog for Go-defined Lispico symbols. Catalogs are non-executable data: they describe host and library symbols with verified facts only. Unknown signature or type information must remain absent — never replace it with invented varargs. Actual Lisp source remains the authority for its own definitions.",
   "type": "object",
   "additionalProperties": false,
