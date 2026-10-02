@@ -15,6 +15,8 @@ Implementation admission is not release admission. This change lands atomically 
 
 Normative delta ownership is likewise fixed rather than negotiated per change. The open parent `migrate-to-llsp` is the sole delta carrier for `llsp-language-server-integration`, `common-lisp-language-server-integration`, and any audited canonical predecessor amendment; this child authors implementation and evidence and writes no competing `MODIFIED` requirement body of its own.
 
+OVERSIZE: These rows are one atomic cutover by construction — the single `[language_servers.llsp]` registration, the explicit `language_ids` map, the deletion of the `sextant` and `lispico` entries, the three-step resolver, the forwarding paths and their behavior tests only exist together, and any subset lands the extension in a state the packaging check and `dispatch_language_server` are written to reject. Splitting them would leave the cutover's own Identifier-map evidence section cited by the baseline and documentation records as the authoritative G2 record while it is incomplete, and would let the resolver's error text name platforms from a release contract verified against a different pin than the one the cache and download rows install.
+
 ## Decisions
 
 ### 1. Registration and removal are one edit, not two

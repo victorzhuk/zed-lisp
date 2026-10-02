@@ -14,6 +14,8 @@ Boundaries carried from the parent, not re-decided here: the pinned release and 
 
 The open parent `migrate-to-llsp` is the sole normative delta carrier for both capabilities; this child authors none of its own and amends no requirement. What it does write outside its own directory is bounded and enumerated: three example settings files, and — when the measured server rejects the portable context surface — metadata-only annotations in three named schema files. G4's current state is recorded in `feasibility.md` and nowhere else.
 
+OVERSIZE: The probe, its recorded route or failure mode, the negative-result escalation and the two research answers are one measurement against one pinned release, and `feasibility.md` is the sole authoritative record of G4 that the baseline and documentation children point at. Splitting them leaves G4's consequence cited from a file that records the outcome but not the evidence behind it, or lets the initialization-option answer and the metadata-only schema annotations follow from a configuration surface read on one release while the digest route was probed on another.
+
 ## Decisions
 
 ### 1. The probe measures the real thing, not a stand-in

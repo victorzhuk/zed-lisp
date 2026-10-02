@@ -14,6 +14,8 @@ The pinned release is the initial measurement, not a perpetual constraint on the
 
 One constraint on this child's own reach: the parent's own Authorization section requires separate authorization for every change to the extension, and the split therefore keeps the record and the measurement apart from the cutover. Nothing here patches llsp, go-lispico, zhk or Yagel; the record states what each owes and where that work lives.
 
+OVERSIZE: Every row here feeds one record, and four sibling children link to that record as the authority for G1 and G3, so a partial delivery would leave `gates.md` cited as authoritative while its retention measurement, the release contract, the identifier reads and the analysis-gap rows are still missing. The rows cannot be split because the pin, the asset and digest readings, the identifier reads and the G1 observation are the same measurement on the same release: cutting between them lets one release or measurement drift across pins and leaves the G1 criterion applied to an observation made against a different binary than the contract it is recorded beside.
+
 ## Decisions
 
 ### 1. One authoritative record per gate

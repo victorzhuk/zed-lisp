@@ -10,6 +10,8 @@ Two premises are inherited from siblings and are not re-derived here. The pinned
 
 The harness lives in the repository's `tests/` tree and speaks framed JSON-RPC to a real server process over stdio. It is a test, not a permanent capability: nothing in the extension depends on it, and it has no mock, fixture server, or recorded transcript standing in for the binary.
 
+OVERSIZE: The stdio harness, the lifecycle sessions, the recorded Zed sessions, the historical-negative invocation and `acceptance.md` are one evidence set that the documentation child reads as the authoritative statement of what the landed candidate actually did. Delivering them apart leaves `acceptance.md` cited as authoritative for a capability whose session was never run, and splitting the historical invocation from the candidate run breaks the shared retention-assertion path it exists to prove — the two would then be free to resolve different binaries and the history row would stop being checkable against the current one.
+
 ## Decisions
 
 ### 1. Two independent signals for dialect identity

@@ -10,6 +10,8 @@ The bounded check suite is `make test`, which the `Makefile` already bounds: `ch
 
 Two facts shape the prose. The cutover may land as an authorized unreleased development state while G3 and G5 are still open, so the documents are written against a candidate whose release status is not yet settled. And each gate has exactly one authoritative record; the observations this change states are copied from those records, never from another child's prose or from an earlier measurement of the same pin.
 
+OVERSIZE: The README, the examples text, the changelog entry, the clean check run and the ordered archive are one close-out against one set of gate records, and every documented value is re-read from the record that owns it before it is written. Splitting them would let prose and changelog be written from one gate state while the checks and the archive ran against another, and the acceptance criterion that archives the four implementation and evidence children in dependency order before this one is unprovable if any part of the sequence lands separately.
+
 ## Decisions
 
 ### 1. Every documented value is copied from the record that owns it
