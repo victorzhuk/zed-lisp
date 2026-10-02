@@ -15,10 +15,11 @@ commit = "32323509b3d9fe96607d151c2da2c9009eb13a2f"
 repository = "https://github.com/sogaiu/tree-sitter-clojure"
 commit = "e43eff80d17cf34852dcd92ca5e6986d23a7040f"
 
-[language_servers.sextant]
-name = "sextant"
-languages = ["Common Lisp"]
+[language_servers.llsp]
+name = "llsp"
+languages = ["Common Lisp", "Lispico Clojure", "Lispico CL"]
 
-[language_servers.lispico]
-name = "lispico"
-languages = ["Lispico Clojure", "Lispico CL"]
+[language_servers.llsp.language_ids]
+"Common Lisp" = "lisp"
+"Lispico Clojure" = "lispico-clojure"
+"Lispico CL" = "lispico-cl"

@@ -6,6 +6,17 @@ Scope note: this change prepares the migration. Approval covers the specificatio
 
 ## 1. Gates — recorded, verified, blocking
 
+Each gate's current state lives in exactly one authoritative record, which
+this task section consumes and never restates: **G1** and **G3** in
+[`migrate-to-llsp-upstream-gates/gates.md`](migrate-to-llsp-upstream-gates/gates.md),
+**G2** in [`migrate-to-llsp-cutover/design.md`](migrate-to-llsp-cutover/design.md)
+(Identifier-map evidence), **G4** in
+[`migrate-to-llsp-host-feasibility/feasibility.md`](migrate-to-llsp-host-feasibility/feasibility.md)
+(Gate consequence), **G5** in
+[`migrate-to-llsp-acceptance/acceptance.md`](migrate-to-llsp-acceptance/acceptance.md)
+(Real-server proof status). The implementation authorization is recorded in
+the cutover's §Authorization record.
+
 - [ ] 1.1 Record the upstream language-ID retention gate. Reproduce the settings-change dialect loss against `llsp` `v0.2.0` (`88e3e72`) and capture the evidence: `didOpen` with `languageId=lispico-cl` on a `.lisp` buffer publishes reader-invalid diagnostics, one accepted `workspace/didChangeConfiguration` publishes none, and a second change, an ordinary edit, and `default_dialect` do not restore it. Confirm the control dialects do not flip. *(Reproduced on two independent 0.2.0 binaries; recorded in the change proposal and design.)*
 - [ ] 1.2 Record the identifier-map requirement. Confirm the identifiers llsp declares for each of the three dialects, confirm the shape Zed derives from a display name when no map is declared, and record which of the three modes does not match without an explicit map. This is zed-lisp's own fix, not an upstream gate. *(Dialect declarations and the ID-matching function read in `../llsp`; map shape fixed in the new capability's spec.)*
 - [ ] 1.3 Record the host-aware parity gap. Confirm which of the parent change's context, catalog, library, and phase requirements have no llsp equivalent, and mark those parent tasks as still open. *(No catalog, host-profile, layer, or phase concept exists upstream; parent 3.x/4.x stay open.)*
@@ -48,4 +59,4 @@ Runs against the landed atomic cutover, before anything is released. No gate is 
 - [ ] 5.1 Update the existing README architecture and configuration sections for the shared server, the resolution chain, the supported platforms, and the gate-backed limitations. No invented CLI flags or endpoints; every documented value comes from what 1.5 and 2.4 verified. Any note on `files.associations` is presented as an optional user mitigation, never as a required setting.
 - [ ] 5.2 Add the change to the existing `CHANGELOG.md` under `[Unreleased]`, describing the user-visible outcome in one entry. No new changelog file.
 - [ ] 5.3 Run the bounded full check suite and `openspec validate migrate-to-llsp --strict`; require both clean before requesting the archive.
-- [ ] 5.4 Archive **only after** `add-lispico-development-support` is also complete, in the order recorded in the design: `llsp-language-server-integration` first, the baseline `common-lisp-language-server-integration` delta with it, and the amended parent last. If the parent is not complete, leave this change unarchived. No forced or premature archive, and no `TBD` purpose left behind in `openspec/specs/`.
+- [ ] 5.4 Archive **only after** every implementation, evidence and pre-archive task of this change and of each child is complete, in the by-change ordering recorded in the design: `migrate-to-llsp-upstream-gates`, then `migrate-to-llsp-host-feasibility`, then `migrate-to-llsp-cutover`, then `migrate-to-llsp-acceptance`, then this parent once — applying both capability deltas in the same operation — and `migrate-to-llsp-docs-release` last. No archive command names a capability. No forced or premature archive, and no `TBD` purpose left behind in `openspec/specs/`.

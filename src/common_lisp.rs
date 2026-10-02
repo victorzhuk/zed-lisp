@@ -1,73 +1,435 @@
-use zed_extension_api::lsp::{Completion, CompletionKind};
+use sha2::{Digest, Sha256};
+use std::io::Read as _;
+use std::path::{Component, Path, PathBuf};
 use zed_extension_api::settings::LspSettings;
 use zed_extension_api::{
-    self as zed, set_language_server_installation_status, CodeLabel, CodeLabelSpan,
-    LanguageServerId, LanguageServerInstallationStatus, Worktree,
+    self as zed, DownloadedFileType, GithubRelease, LanguageServerId, Worktree,
 };
 
-const LISPICO_SERVER_BINARY: &str = "lispico-lsp";
+/// The release the baseline record verified
+/// (openspec/changes/migrate-to-llsp-upstream-gates/gates.md). Adopting a
+/// different pin is a separately approved change that remeasures the gates.
+const LLSP_RELEASE_TAG: &str = "v0.2.1";
+const LLSP_GITHUB_REPO: &str = "victorzhuk/llsp";
+const DIGEST_LIST_ASSET: &str = "SHA256SUMS";
+const COMPLETION_STATE_FILE: &str = "complete.json";
 
-/// Chooses the server command for a language server id. The Lispico and
-/// sextant servers are fully independent: an unknown id never falls through
-/// to sextant, and the Lispico path never reaches sextant's download or
-/// Roswell fallback.
-fn dispatch_language_server(id: &str) -> Result<ServerKind, String> {
+const SUPPORTED_PLATFORMS: &str =
+    "Linux x86_64, Linux aarch64, macOS x86_64, macOS aarch64, Windows x86_64";
+
+/// Rejects every id except the one registered server; both previous server
+/// ids are unknown here, and no id ever falls through to another server.
+fn dispatch_language_server(id: &str) -> Result<(), String> {
     match id {
-        "lispico" => Ok(ServerKind::Lispico),
-        "sextant" => Ok(ServerKind::Sextant),
+        "llsp" => Ok(()),
         other => Err(format!(
             "unknown language server id: {other}. \
-             This extension only provides the 'sextant' and 'lispico' servers."
+             This extension registers only the 'llsp' server."
         )),
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum ServerKind {
-    Lispico,
-    Sextant,
+/// Published archive per platform, from the baseline record's verified
+/// release contract. Windows aarch64 has no published archive; it is named
+/// unsupported rather than served another platform's archive.
+fn llsp_asset_name(platform: (zed::Os, zed::Architecture)) -> Option<&'static str> {
+    match platform {
+        (zed::Os::Linux, zed::Architecture::X8664) => Some("llsp-x86_64-unknown-linux-musl.tar.gz"),
+        (zed::Os::Linux, zed::Architecture::Aarch64) => {
+            Some("llsp-aarch64-unknown-linux-musl.tar.gz")
+        }
+        (zed::Os::Mac, zed::Architecture::X8664) => Some("llsp-x86_64-apple-darwin.tar.gz"),
+        (zed::Os::Mac, zed::Architecture::Aarch64) => Some("llsp-aarch64-apple-darwin.tar.gz"),
+        (zed::Os::Windows, zed::Architecture::X8664) => Some("llsp-x86_64-pc-windows-msvc.zip"),
+        _ => None,
+    }
 }
 
-/// Resolves the Lispico server command: configured binary path first, then
-/// `lispico-lsp` on PATH. There is no download, build, Roswell, or sextant
-/// fallback: a missing server leaves the structural (Tree-sitter) features in
-/// place and reports one actionable error. Configured arguments and
-/// environment apply to both resolution paths.
-fn resolve_lispico_command(
-    configured: Option<zed::Command>,
-    args: Vec<String>,
-    env: Vec<(String, String)>,
-    which: impl Fn(&str) -> Option<String>,
-) -> Result<zed::Command, String> {
-    if let Some(command) = configured {
-        return Ok(command);
+fn platform_key(platform: (zed::Os, zed::Architecture)) -> String {
+    format!("{:?}-{:?}", platform.0, platform.1)
+}
+
+/// The executable member inside a published archive; the cache keeps the
+/// binary under the same name.
+fn binary_file_name(asset_name: &str) -> &'static str {
+    if asset_name.ends_with(".zip") {
+        "llsp.exe"
+    } else {
+        "llsp"
+    }
+}
+
+/// Top-level member directory of an archive: the asset name without its
+/// compression suffix, as the pinned release publishes (`llsp-<target>/llsp`).
+fn member_dir(asset_name: &str) -> &str {
+    asset_name
+        .strip_suffix(".tar.gz")
+        .or_else(|| asset_name.strip_suffix(".zip"))
+        .unwrap_or(asset_name)
+}
+
+/// True when `path` is a regular file with at least one executable bit.
+/// On platforms without POSIX permission bits (the wasm extension build)
+/// a regular file counts as ready.
+fn executable_file(path: &Path) -> bool {
+    if !path.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::metadata(path).is_ok_and(|stat| stat.permissions().mode() & 0o111 != 0)
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
+/// The host capabilities the verified-download step needs. The production
+/// implementation calls the extension host's imports; tests inject their own
+/// so the resolution logic runs without network access.
+trait ReleaseSource {
+    fn release_by_tag(&self, repo: &str, tag: &str) -> Result<GithubRelease, String>;
+    fn download(&self, url: &str, path: &Path) -> Result<(), String>;
+    fn make_executable(&self, path: &Path) -> Result<(), String>;
+}
+
+struct HostReleaseSource;
+
+impl ReleaseSource for HostReleaseSource {
+    fn release_by_tag(&self, repo: &str, tag: &str) -> Result<GithubRelease, String> {
+        zed::github_release_by_tag_name(repo, tag)
     }
 
-    if let Some(path) = which(LISPICO_SERVER_BINARY) {
-        return Ok(zed::Command {
-            command: path,
-            args,
-            env,
-        });
+    fn download(&self, url: &str, path: &Path) -> Result<(), String> {
+        zed::download_file(
+            url,
+            &path.display().to_string(),
+            DownloadedFileType::Uncompressed,
+        )
     }
 
-    Err(format!(
-        "{LISPICO_SERVER_BINARY} not found. Install go-lispico and put {LISPICO_SERVER_BINARY} \
-         on your PATH, or set the binary path in Zed settings:\n\
-         {{\"lsp\": {{\"lispico\": {{\"binary\": {{\"path\": \"/path/to/{LISPICO_SERVER_BINARY}\"}}}}}}}}\n\
+    fn make_executable(&self, path: &Path) -> Result<(), String> {
+        zed::make_file_executable(&path.display().to_string())
+    }
+}
+
+/// One actionable resolution failure: the supported platforms, why the chain
+/// stopped, and the three remedies.
+fn resolution_error(reason: &str) -> String {
+    format!(
+        "llsp could not be resolved: {reason}. \
+         Supported platforms: {SUPPORTED_PLATFORMS}. \
+         Remedies: (1) set `lsp.llsp.binary.path` in your Zed settings to an \
+         installed llsp binary, (2) expose `llsp` on your PATH, or (3) place a \
+         verified llsp binary (with its {COMPLETION_STATE_FILE} marker) in the \
+         extension cache directory llsp-{LLSP_RELEASE_TAG}. \
          Structural highlighting remains available without the server."
-    ))
+    )
 }
 
-struct CommonLispExtension {
-    cached_binary_path: Option<String>,
+/// Reads the digest the published `SHA256SUMS` records for one asset. A
+/// missing or malformed entry is a release-contract defect, never something
+/// to work around.
+fn sha256sums_entry(contents: &str, asset_name: &str) -> Result<String, String> {
+    for line in contents.lines() {
+        let mut parts = line.split_whitespace();
+        let (Some(digest), Some(name)) = (parts.next(), parts.next()) else {
+            continue;
+        };
+        if name == asset_name {
+            let is_hex = digest.len() == 64 && digest.chars().all(|c| c.is_ascii_hexdigit());
+            if !is_hex {
+                return Err(format!(
+                    "{DIGEST_LIST_ASSET} entry for {asset_name} is malformed"
+                ));
+            }
+            return Ok(digest.to_ascii_lowercase());
+        }
+    }
+    Err(format!("{DIGEST_LIST_ASSET} has no entry for {asset_name}"))
 }
+
+fn sha256_file(path: &Path) -> Result<String, String> {
+    let mut file = std::fs::File::open(path).map_err(|e| format!("open {path:?}: {e}"))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 65536];
+    loop {
+        let read = file
+            .read(&mut buffer)
+            .map_err(|e| format!("read {path:?}: {e}"))?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
+}
+
+/// Extracts the digest-verified archive into `payload_dir`. Only archive
+/// members inside a single top-level directory are accepted; the tar crate
+/// and the zip crate parse the published formats, and no entry may escape
+/// the payload directory.
+fn extract_archive(archive: &Path, asset_name: &str, payload_dir: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(payload_dir).map_err(|e| format!("create payload dir: {e}"))?;
+    if asset_name.ends_with(".zip") {
+        extract_zip(archive, payload_dir)
+    } else {
+        extract_tar_gz(archive, payload_dir)
+    }
+}
+
+fn extract_tar_gz(archive: &Path, payload_dir: &Path) -> Result<(), String> {
+    let file = std::fs::File::open(archive).map_err(|e| format!("open archive: {e}"))?;
+    let decoder = flate2::read::GzDecoder::new(file);
+    let mut archive = tar::Archive::new(decoder);
+    let entries = archive
+        .entries()
+        .map_err(|e| format!("reading archive entries: {e}"))?;
+    for entry in entries {
+        let mut entry = entry.map_err(|e| format!("archive entry: {e}"))?;
+        let member = entry
+            .path()
+            .map_err(|e| format!("archive member path: {e}"))?
+            .to_path_buf();
+        if member.components().any(|c| c == Component::ParentDir) {
+            return Err(format!("unsafe archive member {member:?}"));
+        }
+        let target = payload_dir.join(&member);
+        if entry.header().entry_type().is_dir() {
+            std::fs::create_dir_all(&target)
+                .map_err(|e| format!("create directory {member:?}: {e}"))?;
+        } else {
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("create directory for {member:?}: {e}"))?;
+            }
+            let mut out = std::fs::File::create(&target)
+                .map_err(|e| format!("create file {member:?}: {e}"))?;
+            std::io::copy(&mut entry, &mut out)
+                .map_err(|e| format!("extract member {member:?}: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
+fn extract_zip(archive: &Path, payload_dir: &Path) -> Result<(), String> {
+    let file = std::fs::File::open(archive).map_err(|e| format!("open archive: {e}"))?;
+    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("reading zip: {e}"))?;
+    for index in 0..zip.len() {
+        let mut entry = zip.by_index(index).map_err(|e| format!("zip entry: {e}"))?;
+        let member = entry.name().to_string();
+        if member.split(['/', '\\']).any(|part| part == "..") {
+            return Err(format!("unsafe archive member {member:?}"));
+        }
+        let target = payload_dir.join(&member);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&target)
+                .map_err(|e| format!("create directory {member:?}: {e}"))?;
+        } else {
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("create directory for {member:?}: {e}"))?;
+            }
+            let mut out = std::fs::File::create(&target)
+                .map_err(|e| format!("create file {member:?}: {e}"))?;
+            std::io::copy(&mut entry, &mut out)
+                .map_err(|e| format!("extract member {member:?}: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
+/// The binary of a complete verified cache entry: the entry's completion
+/// state must exist, match the active version and platform, and the binary
+/// must carry an executable bit. An entry missing any of these is not a
+/// verified install and is never started.
+fn verified_cache_binary(root: &Path, platform: &str) -> Option<PathBuf> {
+    let entry_dir = root.join(format!("llsp-{LLSP_RELEASE_TAG}"));
+    let state = std::fs::read_to_string(entry_dir.join(COMPLETION_STATE_FILE)).ok()?;
+    let state: zed::serde_json::Value = zed::serde_json::from_str(&state).ok()?;
+    let version = state.get("version").and_then(|v| v.as_str())?;
+    let state_platform = state.get("platform").and_then(|v| v.as_str())?;
+    if version != LLSP_RELEASE_TAG || state_platform != platform {
+        return None;
+    }
+    let binary = entry_dir.join(binary_file_name(
+        state.get("asset").and_then(|v| v.as_str()).unwrap_or(""),
+    ));
+    if !executable_file(&binary) {
+        return None;
+    }
+    Some(binary)
+}
+
+/// Removes every cache entry other than the active version's.
+fn prune_other_versions(root: &Path) {
+    let keep = format!("llsp-{LLSP_RELEASE_TAG}");
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.starts_with("llsp-") && name != keep {
+            let _ = std::fs::remove_dir_all(entry.path());
+        }
+    }
+}
+
+/// Downloads the pinned release, verifies its digest against the published
+/// `SHA256SUMS`, extracts only on a match, marks the binary executable, and
+/// writes the completion state last. A failure at any step removes what the
+/// attempt wrote.
+fn install_verified_release(
+    root: &Path,
+    source: &dyn ReleaseSource,
+    platform: (zed::Os, zed::Architecture),
+) -> Result<PathBuf, String> {
+    let entry_dir = root.join(format!("llsp-{LLSP_RELEASE_TAG}"));
+    let outcome = install_into(&entry_dir, source, platform);
+    match outcome {
+        Ok(binary) => {
+            prune_other_versions(root);
+            Ok(binary)
+        }
+        Err(reason) => {
+            let _ = std::fs::remove_dir_all(&entry_dir);
+            Err(resolution_error(&reason))
+        }
+    }
+}
+
+fn install_into(
+    entry_dir: &Path,
+    source: &dyn ReleaseSource,
+    platform: (zed::Os, zed::Architecture),
+) -> Result<PathBuf, String> {
+    let asset_name = llsp_asset_name(platform).ok_or_else(|| {
+        format!(
+            "no published llsp archive exists for this platform; published platforms: {SUPPORTED_PLATFORMS}"
+        )
+    })?;
+
+    let release = source
+        .release_by_tag(LLSP_GITHUB_REPO, LLSP_RELEASE_TAG)
+        .map_err(|e| format!("release lookup for {LLSP_RELEASE_TAG} failed: {e}"))?;
+
+    let asset = release
+        .assets
+        .iter()
+        .find(|asset| asset.name == asset_name)
+        .ok_or_else(|| format!("release {LLSP_RELEASE_TAG} publishes no archive {asset_name}"))?;
+    let digest_asset = release
+        .assets
+        .iter()
+        .find(|asset| asset.name == DIGEST_LIST_ASSET)
+        .ok_or_else(|| format!("release {LLSP_RELEASE_TAG} publishes no {DIGEST_LIST_ASSET}"))?;
+
+    std::fs::create_dir_all(entry_dir).map_err(|e| format!("create cache entry: {e}"))?;
+
+    let sums_path = entry_dir.join("SHA256SUMS.download");
+    source
+        .download(&digest_asset.download_url, &sums_path)
+        .map_err(|e| format!("downloading {DIGEST_LIST_ASSET}: {e}"))?;
+    let sums = std::fs::read_to_string(&sums_path)
+        .map_err(|e| format!("reading {DIGEST_LIST_ASSET}: {e}"))?;
+    let expected = sha256sums_entry(&sums, asset_name)?;
+    let _ = std::fs::remove_file(&sums_path);
+
+    // The archive is untrusted until its digest matches the published entry.
+    let archive_path = entry_dir.join("archive.download");
+    source
+        .download(&asset.download_url, &archive_path)
+        .map_err(|e| format!("downloading {asset_name}: {e}"))?;
+    let observed = sha256_file(&archive_path)?;
+    if observed != expected {
+        return Err(format!(
+            "digest mismatch for {asset_name}: expected {expected}, got {observed}"
+        ));
+    }
+
+    let payload_dir = entry_dir.join("payload");
+    extract_archive(&archive_path, asset_name, &payload_dir)?;
+    let _ = std::fs::remove_file(&archive_path);
+
+    let member = payload_dir
+        .join(member_dir(asset_name))
+        .join(binary_file_name(asset_name));
+    let binary = entry_dir.join(binary_file_name(asset_name));
+    std::fs::rename(&member, &binary).map_err(|e| format!("moving {member:?} into place: {e}"))?;
+    let _ = std::fs::remove_dir_all(&payload_dir);
+
+    source
+        .make_executable(&binary)
+        .map_err(|e| format!("marking the binary executable: {e}"))?;
+
+    // Written last: an entry without this state is partial and never started.
+    let state = zed::serde_json::json!({
+        "version": LLSP_RELEASE_TAG,
+        "platform": platform_key(platform),
+        "asset": asset_name,
+        "digest": observed,
+    });
+    std::fs::write(entry_dir.join(COMPLETION_STATE_FILE), state.to_string())
+        .map_err(|e| format!("writing completion state: {e}"))?;
+
+    Ok(binary)
+}
+
+/// Where the resolved binary came from.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum BinarySource {
+    Configured,
+    PathHit,
+    VerifiedCache,
+    VerifiedDownload,
+}
+
+/// The three-step resolution chain: configured binary, then `PATH`, then the
+/// verified release download reached only when both earlier steps miss, with
+/// a complete verified cache entry reused before any release lookup. The
+/// steps cannot be reordered.
+fn resolve_llsp(
+    root: &Path,
+    configured: Option<String>,
+    which: &dyn Fn(&str) -> Option<String>,
+    source: &dyn ReleaseSource,
+    platform: (zed::Os, zed::Architecture),
+) -> Result<(PathBuf, BinarySource), String> {
+    if let Some(path) = configured {
+        return Ok((PathBuf::from(path), BinarySource::Configured));
+    }
+    if let Some(path) = which("llsp") {
+        return Ok((PathBuf::from(path), BinarySource::PathHit));
+    }
+    let key = platform_key(platform);
+    if let Some(binary) = verified_cache_binary(root, &key) {
+        return Ok((binary, BinarySource::VerifiedCache));
+    }
+    install_verified_release(root, source, platform)
+        .map(|binary| (binary, BinarySource::VerifiedDownload))
+}
+
+/// Builds the launched command with the configured arguments and
+/// environment; every resolution path funnels through this one construction.
+fn command_with(binary: &Path, args: &[String], env: &[(String, String)]) -> zed::Command {
+    zed::Command {
+        command: binary.display().to_string(),
+        args: args.to_vec(),
+        env: env.to_vec(),
+    }
+}
+
+struct CommonLispExtension;
 
 impl zed::Extension for CommonLispExtension {
     fn new() -> Self {
-        Self {
-            cached_binary_path: None,
-        }
+        Self
     }
 
     fn language_server_command(
@@ -75,10 +437,34 @@ impl zed::Extension for CommonLispExtension {
         language_server_id: &LanguageServerId,
         worktree: &Worktree,
     ) -> zed::Result<zed::Command> {
-        match dispatch_language_server(language_server_id.as_ref())? {
-            ServerKind::Lispico => self.lispico_command(language_server_id, worktree),
-            ServerKind::Sextant => self.sextant_command(language_server_id, worktree),
-        }
+        dispatch_language_server(language_server_id.as_ref())?;
+
+        let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
+        let args = lsp_settings
+            .binary
+            .as_ref()
+            .and_then(|binary| binary.arguments.clone())
+            .unwrap_or_default();
+        let env: Vec<(String, String)> = lsp_settings
+            .binary
+            .as_ref()
+            .and_then(|binary| binary.env.clone())
+            .map(|env| env.into_iter().collect())
+            .unwrap_or_default();
+        let configured = lsp_settings
+            .binary
+            .as_ref()
+            .and_then(|binary| binary.path.clone());
+
+        let (binary, _source) = resolve_llsp(
+            Path::new("."),
+            configured,
+            &|name| worktree.which(name),
+            &HostReleaseSource,
+            zed::current_platform(),
+        )?;
+
+        Ok(command_with(&binary, &args, &env))
     }
 
     fn language_server_initialization_options(
@@ -97,351 +483,6 @@ impl zed::Extension for CommonLispExtension {
     ) -> zed::Result<Option<zed::serde_json::Value>> {
         let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
         Ok(lsp_settings.settings)
-    }
-
-    fn label_for_completion(
-        &self,
-        language_server_id: &LanguageServerId,
-        completion: Completion,
-    ) -> Option<CodeLabel> {
-        // The Lispico server formats its own completion labels; only sextant's
-        // label/detail shape is rendered here.
-        if language_server_id.as_ref() != "sextant" {
-            return None;
-        }
-
-        let kind = completion.kind?;
-
-        match kind {
-            CompletionKind::Function | CompletionKind::Method => {
-                let label = completion.label;
-                let detail = completion.detail.as_ref()?;
-                let code = format!("{} {}", label, detail);
-
-                Some(CodeLabel {
-                    code,
-                    spans: vec![
-                        CodeLabelSpan::literal(label.clone(), Some("function".to_string())),
-                        CodeLabelSpan::literal(format!(" {}", detail), None),
-                    ],
-                    filter_range: (0..label.len()).into(),
-                })
-            }
-            _ => None,
-        }
-    }
-}
-
-impl CommonLispExtension {
-    /// Launches the native Lispico language server with configured
-    /// arguments, environment, and pass-through settings.
-    fn lispico_command(
-        &mut self,
-        language_server_id: &LanguageServerId,
-        worktree: &Worktree,
-    ) -> zed::Result<zed::Command> {
-        let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
-
-        let args = lsp_settings
-            .binary
-            .as_ref()
-            .and_then(|b| b.arguments.clone())
-            .unwrap_or_default();
-        let env: Vec<(String, String)> = lsp_settings
-            .binary
-            .as_ref()
-            .and_then(|b| b.env.clone())
-            .map(|h| h.into_iter().collect())
-            .unwrap_or_default();
-        let configured = lsp_settings
-            .binary
-            .and_then(|b| b.path)
-            .map(|path| zed::Command {
-                command: path,
-                args: args.clone(),
-                env: env.clone(),
-            });
-
-        resolve_lispico_command(configured, args, env, |name| worktree.which(name))
-    }
-
-    fn sextant_command(
-        &mut self,
-        language_server_id: &LanguageServerId,
-        worktree: &Worktree,
-    ) -> zed::Result<zed::Command> {
-        let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
-
-        let args = lsp_settings
-            .binary
-            .as_ref()
-            .and_then(|b| b.arguments.clone())
-            .unwrap_or_default();
-        let env: Vec<(String, String)> = lsp_settings
-            .binary
-            .as_ref()
-            .and_then(|b| b.env.clone())
-            .map(|h| h.into_iter().collect())
-            .unwrap_or_default();
-
-        if let Some(path) = lsp_settings.binary.and_then(|b| b.path) {
-            return Ok(zed::Command {
-                command: path,
-                args,
-                env,
-            });
-        }
-
-        if let Some(sextant_path) = worktree.which("sextant") {
-            return Ok(zed::Command {
-                command: sextant_path,
-                args,
-                env,
-            });
-        }
-
-        if let Some(sextant_path) = self.download_sextant(language_server_id)? {
-            return Ok(zed::Command {
-                command: sextant_path,
-                args,
-                env,
-            });
-        }
-
-        let mut roswell_attempted = false;
-        if let Some(ros_path) = worktree.which("ros") {
-            roswell_attempted = true;
-            set_language_server_installation_status(
-                language_server_id,
-                &LanguageServerInstallationStatus::Downloading,
-            );
-
-            let output = zed::process::Command::new(ros_path)
-                .args(["install", "victorzhuk/sextant"])
-                .output();
-
-            match output {
-                Ok(output) if output.status == Some(0) => {
-                    if let Some(sextant_path) = worktree.which("sextant") {
-                        set_language_server_installation_status(
-                            language_server_id,
-                            &LanguageServerInstallationStatus::None,
-                        );
-                        return Ok(zed::Command {
-                            command: sextant_path,
-                            args,
-                            env,
-                        });
-                    }
-                    return Err("sextant built via Roswell but not found on PATH. \
-                                Add ~/.roswell/bin to PATH."
-                        .into());
-                }
-                Ok(output) => {
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    let msg = if stderr.trim().is_empty() {
-                        "ros install victorzhuk/sextant exited with a non-zero status".to_string()
-                    } else {
-                        stderr.into_owned()
-                    };
-                    set_language_server_installation_status(
-                        language_server_id,
-                        &LanguageServerInstallationStatus::Failed(msg),
-                    );
-                }
-                Err(err) => {
-                    set_language_server_installation_status(
-                        language_server_id,
-                        &LanguageServerInstallationStatus::Failed(format!(
-                            "build sextant via Roswell: {}",
-                            err
-                        )),
-                    );
-                }
-            }
-        }
-
-        if roswell_attempted {
-            // Roswell was available but did not yield a usable sextant — the
-            // failure is the build or PATH, not a missing Roswell.
-            Err("sextant was not downloaded and the Roswell build \
-                 (ros install victorzhuk/sextant) did not produce a usable binary either. \
-                 Run the install manually to see the underlying failure and add \
-                 ~/.roswell/bin to PATH, or set the binary path in Zed settings:\n\
-                 {\"lsp\": {\"sextant\": {\"binary\": {\"path\": \"/path/to/sextant\"}}}}"
-                .into())
-        } else {
-            Err(
-                "sextant not found on PATH and Roswell (ros) is unavailable to build it. \
-                 Install Roswell, then run:\n\
-                 ros install victorzhuk/sextant\n\
-                 and add ~/.roswell/bin to PATH, or set the binary path in Zed settings:\n\
-                 {\"lsp\": {\"sextant\": {\"binary\": {\"path\": \"/path/to/sextant\"}}}}"
-                    .into(),
-            )
-        }
-    }
-
-    /// True when `path` is a regular file with at least one executable bit.
-    /// On platforms without POSIX permission bits (the wasm extension build)
-    /// a regular file counts as ready.
-    fn executable_file(path: &std::path::Path) -> bool {
-        if !path.is_file() {
-            return false;
-        }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::metadata(path).is_ok_and(|stat| stat.permissions().mode() & 0o111 != 0)
-        }
-        #[cfg(not(unix))]
-        {
-            true
-        }
-    }
-
-    /// Returns the newest previously downloaded sextant version directory,
-    /// if any, so a failed online lookup can fall back to the cache. Only
-    /// directories with an executable binary count.
-    fn latest_cached_sextant_dir(
-        entries: impl IntoIterator<Item = (String, bool)>,
-    ) -> Option<String> {
-        let parse = |version: &str| -> Vec<u64> {
-            version
-                .split('.')
-                .map(|part| part.parse().unwrap_or(0))
-                .collect()
-        };
-
-        entries
-            .into_iter()
-            .filter_map(|(name, has_binary)| {
-                let version = name.strip_prefix("sextant-")?;
-                has_binary.then(|| (parse(version), version.to_string()))
-            })
-            .max_by(|(a, _), (b, _)| a.cmp(b))
-            .map(|(_, version)| version)
-    }
-
-    fn cached_sextant_dir() -> Option<String> {
-        let entries = std::fs::read_dir(".").ok()?.flatten().map(|entry| {
-            let name = entry.file_name().to_string_lossy().into_owned();
-            let has_binary = Self::executable_file(&entry.path().join("sextant"));
-            (name, has_binary)
-        });
-        Self::latest_cached_sextant_dir(entries)
-    }
-
-    fn download_sextant(
-        &mut self,
-        language_server_id: &LanguageServerId,
-    ) -> zed::Result<Option<String>> {
-        if let Some(path) = &self.cached_binary_path {
-            if Self::executable_file(std::path::Path::new(path)) {
-                return Ok(Some(path.clone()));
-            }
-        }
-
-        // Check the latest release first so a running editor still picks up
-        // upgrades; the cached binary is only a fallback for when the lookup,
-        // the asset, the download, or the chmod fails.
-        if let Some(path) = self.download_latest_sextant(language_server_id) {
-            self.cached_binary_path = Some(path.clone());
-            return Ok(Some(path));
-        }
-
-        if let Some(version) = Self::cached_sextant_dir() {
-            let binary_path = format!("sextant-{version}/sextant");
-            self.cached_binary_path = Some(binary_path.clone());
-            return Ok(Some(binary_path));
-        }
-
-        Ok(None)
-    }
-
-    /// Attempts to resolve and download the newest GitHub release asset.
-    /// Returns `None` on any failure after reporting it; never leaves a
-    /// partial or non-executable file behind for the cache check to pick up.
-    fn download_latest_sextant(&mut self, language_server_id: &LanguageServerId) -> Option<String> {
-        let asset_name = match zed::current_platform() {
-            (zed::Os::Linux, zed::Architecture::X8664) => "sextant-linux-x64",
-            (zed::Os::Linux, zed::Architecture::Aarch64) => "sextant-linux-arm64",
-            (zed::Os::Mac, zed::Architecture::Aarch64) => "sextant-macos-arm64",
-            _ => return None,
-        };
-
-        let release = match zed::latest_github_release(
-            "victorzhuk/sextant",
-            zed::GithubReleaseOptions {
-                require_assets: true,
-                pre_release: false,
-            },
-        ) {
-            Ok(release) => release,
-            Err(_) => return None,
-        };
-
-        let asset = release
-            .assets
-            .iter()
-            .find(|asset| asset.name == asset_name)?;
-
-        let version_dir = format!("sextant-{}", release.version);
-        let binary_path = format!("{version_dir}/sextant");
-
-        if !Self::executable_file(std::path::Path::new(&binary_path)) {
-            set_language_server_installation_status(
-                language_server_id,
-                &LanguageServerInstallationStatus::Downloading,
-            );
-            // A failed download must not abort the resolution chain: report
-            // the failure and let the Roswell fallback try.
-            if let Err(err) = zed::download_file(
-                &asset.download_url,
-                &binary_path,
-                zed::DownloadedFileType::Uncompressed,
-            ) {
-                // A partial download must never be left where the cache
-                // reuse check would pick it up.
-                std::fs::remove_file(&binary_path).ok();
-                set_language_server_installation_status(
-                    language_server_id,
-                    &LanguageServerInstallationStatus::Failed(format!(
-                        "download sextant {}: {err}",
-                        release.version
-                    )),
-                );
-                return None;
-            }
-            if let Err(err) = zed::make_file_executable(&binary_path) {
-                // A downloaded-but-not-executable file must not survive to
-                // poison later cache hits.
-                std::fs::remove_file(&binary_path).ok();
-                set_language_server_installation_status(
-                    language_server_id,
-                    &LanguageServerInstallationStatus::Failed(format!(
-                        "make sextant executable: {err}"
-                    )),
-                );
-                return None;
-            }
-
-            if let Ok(entries) = std::fs::read_dir(".") {
-                for entry in entries.flatten() {
-                    let name = entry.file_name().to_string_lossy().into_owned();
-                    if name.starts_with("sextant-") && name != version_dir {
-                        std::fs::remove_dir_all(entry.path()).ok();
-                    }
-                }
-            }
-
-            set_language_server_installation_status(
-                language_server_id,
-                &LanguageServerInstallationStatus::None,
-            );
-        }
-
-        Some(binary_path)
     }
 }
 

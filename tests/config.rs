@@ -1201,3 +1201,83 @@ fn template_source_fixtures_parse_in_their_selected_mode() {
         parse(&clojure, &source, true, path);
     }
 }
+
+/// Runs the packaging checker against a mutated manifest copy and returns
+/// (exit status, stderr). The mutation, not the clean run, is the proof.
+fn check_package_with_manifest(manifest_text: &str) -> (i32, String) {
+    let dir = std::env::temp_dir().join(format!(
+        "check-package-mutation-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let manifest_path = dir.join("extension.toml");
+    std::fs::write(&manifest_path, manifest_text).unwrap();
+
+    let output = std::process::Command::new("python3")
+        .arg(project_root().join("scripts/check_package.py"))
+        .arg("--manifest")
+        .arg(&manifest_path)
+        .output()
+        .expect("python3 must be available to run scripts/check_package.py");
+    let _ = std::fs::remove_dir_all(&dir);
+    (
+        output.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+    )
+}
+
+fn clean_manifest_text() -> String {
+    std::fs::read_to_string(project_root().join("extension.toml")).unwrap()
+}
+
+#[test]
+fn check_package_fails_when_a_language_has_no_identifier_entry() {
+    // Drop the Lispico CL identifier from the map, leaving the other two.
+    let mutated = clean_manifest_text().replace(
+        "\"Lispico CL\" = \"lispico-cl\"",
+        "# no identifier declared",
+    );
+    assert_ne!(mutated, clean_manifest_text());
+    let (code, stderr) = check_package_with_manifest(&mutated);
+    assert_eq!(code, 1, "a missing language_ids entry must fail the check");
+    assert!(
+        stderr.contains("no language_ids entry"),
+        "the failure must name the missing identifier: {stderr}"
+    );
+}
+
+#[test]
+fn check_package_fails_when_a_previous_server_entry_survives() {
+    let mutated = format!(
+        "{}\n[language_servers.sextant]\nname = \"sextant\"\nlanguages = [\"Common Lisp\"]\n\n[language_servers.sextant.language_ids]\n\"Common Lisp\" = \"lisp\"\n",
+        clean_manifest_text()
+    );
+    let (code, stderr) = check_package_with_manifest(&mutated);
+    assert_eq!(
+        code, 1,
+        "a surviving previous server entry must fail the check"
+    );
+    assert!(
+        stderr.contains("sextant") && stderr.contains("only 'llsp'"),
+        "the failure must name the rejected server: {stderr}"
+    );
+}
+
+#[test]
+fn check_package_fails_when_the_llsp_entry_is_absent() {
+    let manifest = clean_manifest_text();
+    let cut = manifest
+        .find("[language_servers.")
+        .expect("the clean manifest declares a language server");
+    let mutated = manifest[..cut].to_string();
+    let (code, stderr) = check_package_with_manifest(&mutated);
+    assert_eq!(code, 1, "a manifest without any server entry must fail");
+    assert!(
+        stderr.contains("must declare the 'llsp' server"),
+        "the failure must name the absent server: {stderr}"
+    );
+}

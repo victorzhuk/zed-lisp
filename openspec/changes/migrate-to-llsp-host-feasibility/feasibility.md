@@ -11,10 +11,16 @@ preserved as history.
 
 ## Gate consequence
 
-**G4 is met in mechanism and open in adoption: the probe succeeded on every
-step, and the route depends on three crates that are not yet approved
-dependencies, so the cutover does not proceed until that approval lands.**
-Precisely:
+**G4 is met.** The probe succeeded on every step, and the dependency approval
+the route waited on has since been recorded: on 2026-10-02 the repository
+owner approved adding `sha2`, `flate2` (with its pure-Rust `rust_backend`)
+and `tar` — plus `zip` for the Windows archive form — to `Cargo.toml` as
+ordinary dependencies of the cutover change, recorded there as part of the
+authorization that admits the atomic unreleased development cutover. The
+earlier state below is preserved as history.
+
+Historical measurement state at the time of the probe (2026-10-02), preserved
+verbatim before the approval landed:
 
 - Route: **proven.** SHA-256 over the whole published archive before anything
   is extracted, then extraction of the published member layout from the
@@ -22,7 +28,7 @@ Precisely:
   extension host runs — under a standalone WASI runtime. The negative
   direction was exercised: a wrong expected digest stops the probe with
   nothing extracted.
-- Dependencies: **not approved.** The hashing step needs `sha2` and the
+- Dependencies: **not approved at measurement time.** The hashing step needs `sha2` and the
   extraction step needs `flate2` (with its pure-Rust `rust_backend`) plus
   `tar`; none of the three is in the repository's `Cargo.toml`, and per the
   split's rules none is added or assumed by this change. Approval of the
@@ -137,11 +143,9 @@ builds on it.
 
 No escalation is triggered: the probe is a full positive on every step, so
 tasks 3.1's return-for-approval branch and the partial-result branch do not
-apply. The only open item on G4 is the dependency approval recorded under
-**Gate consequence** (task 3.3): the probe's success depends on `sha2`,
-`flate2`, and `tar`, the maintainers have not approved them yet, so G4 is open
-until that approval lands, and no approval is assumed by this change. The
-resolution chain is not reordered and no capability is added here.
+apply. The dependency approval that was the only open item on G4 has since
+been recorded (see **Gate consequence**); the resolution chain was not
+reordered and no capability was added here.
 
 ## Observation — `files.associations` as a dialect mitigation
 

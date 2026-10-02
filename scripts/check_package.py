@@ -22,6 +22,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+REGISTERED_SERVER = "llsp"
+
 QUERY_FILES = (
     "highlights.scm",
     "indents.scm",
@@ -45,9 +47,18 @@ def git(*args: str) -> str:
     return result.stdout.strip()
 
 
+def manifest_path() -> Path:
+    """The manifest to validate; `--manifest` lets tests validate a mutated
+    copy without touching the working tree."""
+    args = sys.argv[1:]
+    if "--manifest" in args:
+        return Path(args[args.index("--manifest") + 1])
+    return ROOT / "extension.toml"
+
+
 def main() -> None:
     try:
-        manifest = tomllib.loads((ROOT / "extension.toml").read_text())
+        manifest = tomllib.loads(manifest_path().read_text())
     except tomllib.TOMLDecodeError as err:
         fail(f"extension.toml does not parse: {err}")
 
@@ -104,10 +115,24 @@ def main() -> None:
             if path.exists() and not path.read_text().strip():
                 fail(f"languages/{directory}/{query} is empty")
 
-    for server, entry in manifest.get("language_servers", {}).items():
+    language_servers = manifest.get("language_servers", {})
+    if REGISTERED_SERVER not in language_servers:
+        fail(f"language_servers must declare the {REGISTERED_SERVER!r} server")
+    for server, entry in language_servers.items():
+        if server != REGISTERED_SERVER:
+            fail(
+                f"language server {server!r} is not registered by this extension; "
+                f"only {REGISTERED_SERVER!r} is"
+            )
+        identifiers = entry.get("language_ids", {})
         for language in entry.get("languages", []):
             if language not in languages:
                 fail(f"language server {server}: language {language!r} has no config.toml")
+            if language not in identifiers:
+                fail(
+                    f"language server {server}: language {language!r} has no "
+                    "language_ids entry; the wire identifier must be declared explicitly"
+                )
 
     snippets = manifest.get("snippets", [])
     if isinstance(snippets, str):

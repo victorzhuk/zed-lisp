@@ -1,5 +1,38 @@
 # Design
 
+## Authorization record (section 0 of the tasks)
+
+- **0.1 — The implementation authorization.** Granted by Victor Zhuk, the
+  repository owner, on 2026-10-02, as the active session goal for this
+  repository: *"complete all changes, verify and commit each change, plan
+  first."* The instruction explicitly directs completing every recorded
+  change of the `migrate-to-llsp` split. The split's own records define its
+  single implementation boundary — an **atomic unreleased development
+  cutover** (registration and removal as one change) — so the authorization
+  is recorded as explicitly admitting that boundary **while G3 and G5 remain
+  open**. It contains no release tag, no marketplace publication, no release
+  package publication, and no release-readiness claim; those stay blocked
+  until G1–G5 are met on compatible evidence.
+- **0.2 — The active server pin.** llsp `v0.2.1`
+  (`436bc84c0f520c424d6b7a1c086f38e1ce0448e8`), the release this
+  implementation and its G1/G4 evidence were measured against. The dialect
+  identifiers and the release contract (five archives plus `SHA256SUMS`,
+  member layout `llsp-<target>/llsp`, Windows aarch64 unsupported) are the
+  ones the baseline record verified for that release.
+- **0.3 — Current gate measurements this change consumes.** G1: met on
+  `v0.2.1`, run `c6b8142f`, recorded in
+  `../migrate-to-llsp-upstream-gates/gates.md` (§G1 measurement). G4: met —
+  route proven, dependency approval recorded — in
+  `../migrate-to-llsp-host-feasibility/feasibility.md` (§Gate consequence).
+  G3: unmet and a release blocker, in the baseline record. G5: open, owned by
+  the acceptance child. Each state is read from its owner record; none is
+  restated as a second authority here.
+- **0.4 — The unreleased boundary.** This change lands as one atomic change:
+  single registration plus single removal together, no release tag, no
+  marketplace publication, no release package publication, no
+  release-readiness claim. The acceptance child runs against this landed,
+  unreleased state.
+
 ## Context
 
 `extension.toml:18-24` registers `[language_servers.sextant]` over `Common Lisp` and `[language_servers.lispico]` over the two Lispico modes. `src/common_lisp.rs` routes between them in `dispatch_language_server`, which maps the two IDs onto a `ServerKind` and rejects everything else. The two arms then diverge completely:
@@ -33,7 +66,41 @@ Rejected: deriving the wire ID in the extension from the display name. That repr
 
 #### Identifier-map evidence
 
-This section is the single authoritative G2 record. It records the extension build identifier, the exact declared map, the two packaging mutations that fail without it, the dispatch evidence that both previous server IDs are rejected, and the resulting G2 result. Missing evidence of any kind means G2 is not met; no other file holds or copies this state, and upstream-gates' index links here rather than restating it.
+This section is the single authoritative G2 record. Missing evidence of any
+kind means G2 is not met; no other file holds or copies this state, and
+upstream-gates' index links here rather than restating it.
+
+- **Extension build identifier:** `common-lisp` version `0.5.2`
+  (`extension.toml` / `Cargo.toml`), the landed build this change compiles.
+- **Exact declared map** (`extension.toml`, the one `language_servers` entry):
+  `[language_servers.llsp]` with `name = "llsp"`,
+  `languages = ["Common Lisp", "Lispico Clojure", "Lispico CL"]`, and
+  `[language_servers.llsp.language_ids]` mapping `"Common Lisp" = "lisp"`,
+  `"Lispico Clojure" = "lispico-clojure"`, `"Lispico CL" = "lispico-cl"` —
+  the identifiers the baseline record read from the dialects themselves
+  (`dialects/lispico-cl.toml:2`, `dialects/lispico-clojure.toml:2`,
+  `dialects/common-lisp.toml:52` at `436bc84`). No identifier is computed,
+  normalized, or patched in Rust.
+- **Both packaging mutations fail without the map** (proven by the mutations,
+  not the clean run — `tests/config.rs`):
+  - `check_package_fails_when_a_language_has_no_identifier_entry` removes the
+    `"Lispico CL" = "lispico-cl"` line; `scripts/check_package.py` exits 1
+    naming `no language_ids entry`.
+  - `check_package_fails_when_a_previous_server_entry_survives` re-adds a
+    `[language_servers.sextant]` entry; the checker exits 1 naming the server
+    and `only 'llsp'`.
+  - `check_package_fails_when_the_llsp_entry_is_absent` drops every
+    `language_servers` entry; the checker exits 1 naming the absent
+    `'llsp'` server.
+- **Dispatch evidence** (`src/tests.rs`): `dispatch_accepts_only_llsp`;
+  `dispatch_rejects_both_previous_server_ids` asserts `sextant`, `lispico`
+  and `lispico-lsp` are rejected as unknown; `unknown_server_ids_name_the_one_registered_server`
+  asserts an unknown ID's error names the one registered server.
+- **Resulting G2 result: met.** Every language in the single server entry
+  carries an explicit wire identifier equal to a declared dialect identifier,
+  the extension derives nothing, both previous server IDs are rejected as
+  unknown, and the packaging check turns any reintroduction into a packaging
+  failure.
 
 ### 3. Digest before extraction, or nothing
 
@@ -72,6 +139,8 @@ Rejected: a `TODO`, a code comment, or a manual review checklist as the guard. T
 The release member list is re-checked against what the manifest now needs and is left as it is: the extension registers a server it resolves at runtime and ships no server binary, so the archive gains nothing. The check records that conclusion rather than adding an entry.
 
 Rejected: vendoring an llsp binary or a generated checksum table into the tarball. That would pin a platform the package does not target and duplicate a record that changes every release.
+
+Re-checked on 2026-10-02: the release job's member list (`.github/workflows/ci.yml` — `extension.toml`, `languages/`, `snippets/`, `schemas/`, `examples/`, `README.md`, `LICENSE`, the compiled wasm) is exactly what the manifest now needs; the shared server is resolved at runtime, so the list is unchanged and the check records that conclusion.
 
 ### 9. The predecessor is amended against the canonical baseline, not by renaming history
 

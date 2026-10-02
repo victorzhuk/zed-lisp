@@ -5,10 +5,10 @@
   },
   "languages": {
     "Lispico Clojure": {
-      "language_servers": ["lispico"]
+      "language_servers": ["llsp"]
     },
     "Lispico CL": {
-      "language_servers": ["lispico"]
+      "language_servers": ["llsp"]
     }
   }
 }

@@ -11,6 +11,13 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 zed_extension_api = "0.7.0"
+# Verified-release resolution (migrate-to-llsp): SHA-256 over the downloaded
+# archive and extraction from digest-verified bytes only, per the recorded
+# feasibility route.
+sha2 = "0.10"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+tar = "0.4"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
 cc = "1"

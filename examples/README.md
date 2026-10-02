@@ -9,9 +9,9 @@ to the project's `.zed/` directory.
 
 | Template | Modes | Language server | Notes |
 | --- | --- | --- | --- |
-| `zhk/` | `Lispico Clojure` for `workflows/**/*.lisp` | `lispico` | Ordered `lib/*.lisp` prelude; one route's `main.lisp` per program. |
-| `yagel/` | `Lispico Clojure` for `rules/**/*.clj` and `packs/**/*.clj` | `lispico` | Embedded → packs → project layers; every rule is an isolated scope. |
-| `go-lispico/` | `Lispico Clojure` for goldset fixtures, `Lispico CL` for `corpus/` | `lispico` | Narrow fixture paths only; other `.lisp` files keep the default `Common Lisp` mode. |
+| `zhk/` | `Lispico Clojure` for `workflows/**/*.lisp` | `llsp` | Ordered `lib/*.lisp` prelude; one route's `main.lisp` per program. |
+| `yagel/` | `Lispico Clojure` for `rules/**/*.clj` and `packs/**/*.clj` | `llsp` | Embedded → packs → project layers; every rule is an isolated scope. |
+| `go-lispico/` | `Lispico Clojure` for goldset fixtures, `Lispico CL` for `corpus/` | `llsp` | Narrow fixture paths only; other `.lisp` files keep the default `Common Lisp` mode. |
 
 Ordinary Common Lisp files keep their existing `Common Lisp` associations.
 Lispico modes never claim `.lisp`, `.lsp`, `.cl`, `.asd`, `.clj`, or `.edn`
@@ -70,16 +70,20 @@ checkout, derives a fingerprint, captures a snapshot, or hashes a snapshot's
 raw bytes against an `expected_fingerprint` pin; host context resolution,
 snapshot ordering, and symlink- and race-safe reads are equally unwritten.
 That work belongs to go-lispico
-and the host projects. [llsp](https://github.com/victorzhuk/llsp) is a
-separate, future primary Lispico server; at its current 0.2.1 it implements
-none of it — including host contexts — and it is not a release of the
-`lispico-lsp` binary the extension resolves.
+and the host projects. [llsp](https://github.com/victorzhuk/llsp) is the one
+language server the extension registers for all three modes; on its pinned
+release (`v0.2.1`) it serves the dialect-aware editor analysis but implements
+none of the host-context surface above.
 
 ## Prerequisites
 
-Semantic features (completion, signatures, navigation, diagnostics)
-require an existing `lispico-lsp` binary that you supply yourself (the
-extension only resolves and launches it, and go-lispico does not ship it)
-plus the catalogs each template references. Without them, structural
-editing, highlighting, outline, and text objects keep working and the
-missing dependency is reported once when a Lispico buffer opens.
+Semantic features (completion, signatures, navigation, diagnostics) are
+served by the shared `llsp` language server. The extension resolves it in
+order: a configured binary (`lsp.llsp.binary.path`), then `llsp` on `PATH`,
+then a checksum-verified download of the pinned release
+([SHA256SUMS](https://github.com/victorzhuk/llsp/releases) verified before
+extraction). Published platforms: Linux x86_64, Linux aarch64, macOS x86_64,
+macOS aarch64, and Windows x86_64; Windows aarch64 has no published archive.
+Without the server, structural editing, highlighting, outline, and text
+objects keep working and the resolution failure is reported once when a
+buffer opens.
