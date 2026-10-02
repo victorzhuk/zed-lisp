@@ -1,5 +1,31 @@
 # Design
 
+## Close-out status (2026-10-02)
+
+- **4.1** `make test` — exit 0: check-package ok; 18 + 16 + 2 + 5 + 4 test
+  results ok (45 passing, 1 ignored — the opt-in historical detector proof).
+- **4.2** `openspec validate migrate-to-llsp --strict` — exit 0.
+- **4.3** readiness confirmation — performed, outcome **not ready to
+  archive**: G1–G4 are met on the current active pin (`v0.2.1`/`436bc84`)
+  per their owner records, but **G5 is incomplete** per
+  [`../migrate-to-llsp-acceptance/acceptance.md`](../migrate-to-llsp-acceptance/acceptance.md)
+  §6.4 — the five editor sessions (§4), the two missing/failing-server
+  sessions (§5), and the historical detector proof (§6.1) are unobserved.
+  Those acceptance items are what 4.3 requires to be met before archiving.
+- **4.4** confirmed: the README, the changelog entry, and
+  `examples/README.md` name no capability absent from the acceptance record
+  and state every limitation from the current authoritative gate records
+  (G3 open on `v0.2.1`; G1 met, with the old association advice carried only
+  as labelled history).
+- **4.5–4.7** — **not performed.** The archive of
+  `migrate-to-llsp-upstream-gates`, `migrate-to-llsp-host-feasibility`,
+  `migrate-to-llsp-cutover`, `migrate-to-llsp-acceptance`, the parent, and
+  this change last is blocked by exactly one item: **G5's missing editor-side
+  evidence** (acceptance record §4, §5, and the §6.1 historical section).
+  When a real Zed session completes those entries and G5 reads `met`, the
+  ordering of 4.5–4.7 executes as written.
+- **4.8** this change stays unarchived with the blocking item recorded above.
+
 ## Context
 
 Three children land before this one: `migrate-to-llsp-upstream-gates` records the verified release and the gate baseline, `migrate-to-llsp-host-feasibility` records the host answers, `migrate-to-llsp-cutover` lands the single `[language_servers.llsp]` entry and the resolution chain, `migrate-to-llsp-acceptance` records what a real server and a real editor did. This change turns those records into user-facing prose, one changelog entry, a clean run, and an archive.
