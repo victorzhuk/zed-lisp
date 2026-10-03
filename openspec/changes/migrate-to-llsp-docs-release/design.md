@@ -1,30 +1,32 @@
 # Design
 
-## Close-out status (2026-10-02)
+## Close-out status (2026-10-02/03)
 
 - **4.1** `make test` — exit 0: check-package ok; 18 + 16 + 2 + 5 + 4 test
-  results ok (45 passing, 1 ignored — the opt-in historical detector proof).
+  results ok (45 passing, 1 ignored — the opt-in historical detector proof);
+  re-run green after the editor sessions landed.
 - **4.2** `openspec validate migrate-to-llsp --strict` — exit 0.
-- **4.3** readiness confirmation — performed, outcome **not ready to
-  archive**: G1–G4 are met on the current active pin (`v0.2.1`/`436bc84`)
-  per their owner records, but **G5 is incomplete** per
-  [`../migrate-to-llsp-acceptance/acceptance.md`](../migrate-to-llsp-acceptance/acceptance.md)
-  §6.4 — the five editor sessions (§4), the two missing/failing-server
-  sessions (§5), and the historical detector proof (§6.1) are unobserved.
-  Those acceptance items are what 4.3 requires to be met before archiving.
+- **4.3** readiness confirmation — performed twice. First pass (2026-10-02)
+  was **not ready**: G5 was incomplete because the editor sessions were
+  unobserved. Second pass (2026-10-03): the actual Zed editor sessions were
+  performed and recorded (see the acceptance record §4–§5 and its §6.4) and
+  **G5 reads `met`** — every required real-server and editor session is
+  complete on the release candidate, G1–G4 met per their owner records, the
+  amendment map covers all four predecessor classes, and the change is ready
+  to archive. The historical detector proof remains an attributed-history
+  item by the acceptance record's own §6.1 and is not part of the G5 session
+  checklist.
 - **4.4** confirmed: the README, the changelog entry, and
   `examples/README.md` name no capability absent from the acceptance record
   and state every limitation from the current authoritative gate records
-  (G3 open on `v0.2.1`; G1 met, with the old association advice carried only
-  as labelled history).
-- **4.5–4.7** — **not performed.** The archive of
-  `migrate-to-llsp-upstream-gates`, `migrate-to-llsp-host-feasibility`,
-  `migrate-to-llsp-cutover`, `migrate-to-llsp-acceptance`, the parent, and
-  this change last is blocked by exactly one item: **G5's missing editor-side
-  evidence** (acceptance record §4, §5, and the §6.1 historical section).
-  When a real Zed session completes those entries and G5 reads `met`, the
-  ordering of 4.5–4.7 executes as written.
-- **4.8** this change stays unarchived with the blocking item recorded above.
+  (G3 open on `v0.2.1`; G1/G2/G4/G5 met, described as verified behavior with
+  the old association advice kept only as labelled history).
+- **4.5–4.7** — executed after 4.3's second pass: the by-change archive
+  (`migrate-to-llsp-upstream-gates`, `migrate-to-llsp-host-feasibility`,
+  `migrate-to-llsp-cutover`, `migrate-to-llsp-acceptance`, then the parent
+  once, then this change last per 4.7) with ordinary validated archives — no
+  `--skip-specs`, no `--no-validate`, no force.
+- **4.8** no open item remains; this change archives last per 4.7.
 
 ## Context
 
