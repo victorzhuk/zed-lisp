@@ -3,17 +3,17 @@
 Record owner: `migrate-to-llsp-acceptance`. This file is the authoritative
 record for **G5** (real-server proof status), under **Real-server proof
 status** below. G1 and G3 are read from
-[`../migrate-to-llsp-upstream-gates/gates.md`](../migrate-to-llsp-upstream-gates/gates.md),
-G2 from [`../migrate-to-llsp-cutover/design.md`](../migrate-to-llsp-cutover/design.md)
+[`../2026-10-04-migrate-to-llsp-upstream-gates/gates.md`](../2026-10-04-migrate-to-llsp-upstream-gates/gates.md),
+G2 from [`../2026-10-04-migrate-to-llsp-cutover/design.md`](../2026-10-04-migrate-to-llsp-cutover/design.md)
 (Identifier-map evidence), and G4 from
-[`../migrate-to-llsp-host-feasibility/feasibility.md`](../migrate-to-llsp-host-feasibility/feasibility.md)
+[`../2026-10-04-migrate-to-llsp-host-feasibility/feasibility.md`](../2026-10-04-migrate-to-llsp-host-feasibility/feasibility.md)
 (Gate consequence) — linked, never copied.
 
 ## 1. Preconditions the evidence is bound to
 
 - **Authorization admitting this run:** the atomic unreleased development
   cutover was landed under the recorded authorization in
-  [`../migrate-to-llsp-cutover/design.md`](../migrate-to-llsp-cutover/design.md)
+  [`../2026-10-04-migrate-to-llsp-cutover/design.md`](../2026-10-04-migrate-to-llsp-cutover/design.md)
   §Authorization record (granted by the repository owner, 2026-10-02), which
   names the active pin, the passing G1 measurement, the verified identifiers
   and release contract, and G4 met with its dependency approval.

@@ -2,10 +2,10 @@
 
 Record owner: `migrate-to-llsp-upstream-gates`. This record is the authoritative
 current state for **G1** (language-ID retention) and **G3** (host-aware parity)
-only. G2 is authoritative in `../migrate-to-llsp-cutover/design.md` under
+only. G2 is authoritative in `../2026-10-04-migrate-to-llsp-cutover/design.md` under
 **Identifier-map evidence**; G4 is authoritative in
-`../migrate-to-llsp-host-feasibility/feasibility.md` under **Gate consequence**;
-G5 is authoritative in `../migrate-to-llsp-acceptance/acceptance.md` under
+`../2026-10-04-migrate-to-llsp-host-feasibility/feasibility.md` under **Gate consequence**;
+G5 is authoritative in `../2026-10-04-migrate-to-llsp-acceptance/acceptance.md` under
 **Real-server proof status**. This record holds links for those three gates and
 no local mutable state for them. A later measurement appends a superseding,
 attributed section; historical facts are never rewritten.
@@ -26,10 +26,10 @@ section.
 | Gate | Current state | Measured / read on | Established by | Authoritative record |
 |---|---|---|---|---|
 | G1 — language-ID retention across settings reload | **met** | `v0.2.1` (`436bc84`), 2026-10-02 | observed on the installed binary (run `c6b8142f`) | this record, §G1 measurement |
-| G2 — wire identifier shape matches a declared dialect ID | open here — established by the cutover's own map and packaging/dispatch evidence | — | — | `../migrate-to-llsp-cutover/design.md` (Identifier-map evidence) — link only, no local state |
+| G2 — wire identifier shape matches a declared dialect ID | open here — established by the cutover's own map and packaging/dispatch evidence | — | — | `../2026-10-04-migrate-to-llsp-cutover/design.md` (Identifier-map evidence) — link only, no local state |
 | G3 — host-aware context, catalog, phase parity | **unmet — blocks release** | `v0.2.1` (`436bc84`), 2026-10-02 | read at `436bc84` (capability absence) + attributed history | this record, §Host-aware parity gap and §Analysis capability gap |
-| G4 — digest-before-extraction feasibility in the WASM host | open here — decided by the feasibility child | — | — | `../migrate-to-llsp-host-feasibility/feasibility.md` (Gate consequence) — link only, no local state |
-| G5 — real-server proof | open here — decided by the acceptance child | — | — | `../migrate-to-llsp-acceptance/acceptance.md` (Real-server proof status) — link only, no local state |
+| G4 — digest-before-extraction feasibility in the WASM host | open here — decided by the feasibility child | — | — | `../2026-10-04-migrate-to-llsp-host-feasibility/feasibility.md` (Gate consequence) — link only, no local state |
+| G5 — real-server proof | open here — decided by the acceptance child | — | — | `../2026-10-04-migrate-to-llsp-acceptance/acceptance.md` (Real-server proof status) — link only, no local state |
 
 No row above reads *met* without the observation or reading behind it; the
 G2/G4/G5 rows deliberately carry no state.
@@ -239,7 +239,7 @@ does not clear G3.
 Three kinds of open work are distinguished and never conflated:
 
 1. **Open migration tasks** — the editable rows in
-   `../migrate-to-llsp/tasks.md` (its sections 3 and 4 name the host-aware
+   `../2026-10-04-migrate-to-llsp/tasks.md` (its sections 3 and 4 name the host-aware
    slices) and in this split's child changes. These are tracked and tickable in
    their own changes.
 2. **Archived task evidence** — `openspec/changes/archive/2026-10-01-add-lispico-development-support/`
@@ -332,7 +332,7 @@ repository to obtain this guarantee; this record states the obligation and the
 ## Proposed parent amendment (specification only — not performed here)
 
 This section specifies the amendments the open parent change
-(`../migrate-to-llsp/`) needs so no document can drift into being the sole
+(`../2026-10-04-migrate-to-llsp/`) needs so no document can drift into being the sole
 source of a gate state. It **records the required amendments; it does not
 perform them.** The parent edits are outside this record's one-file write
 scope and land under their own approval (they are specified here, and nothing

@@ -4,7 +4,7 @@ Record owner: `migrate-to-llsp-host-feasibility`. This file is the sole
 authoritative record of **G4** (digest-before-extraction feasibility in the
 host the extension runs in) and its dependency-approval state, under
 **Gate consequence** below. The baseline record
-(`../migrate-to-llsp-upstream-gates/gates.md`) carries a pointer to here, not a
+(`../2026-10-04-migrate-to-llsp-upstream-gates/gates.md`) carries a pointer to here, not a
 second state. When the active pin changes, this finding is remeasured and
 superseded in place, attributed to the new pin, with the earlier result
 preserved as history.
@@ -42,7 +42,7 @@ verbatim before the approval landed:
 
 ## Release facts consumed (not restated)
 
-Read from `../migrate-to-llsp-upstream-gates/gates.md` — the record this
+Read from `../2026-10-04-migrate-to-llsp-upstream-gates/gates.md` — the record this
 result is bound to — and not from the parent's `v0.2.0` text:
 
 - **Pinned release:** llsp `v0.2.1`, commit `436bc84c0f520c424d6b7a1c086f38e1ce0448e8`,

@@ -21,9 +21,9 @@
   ones the baseline record verified for that release.
 - **0.3 — Current gate measurements this change consumes.** G1: met on
   `v0.2.1`, run `c6b8142f`, recorded in
-  `../migrate-to-llsp-upstream-gates/gates.md` (§G1 measurement). G4: met —
+  `../2026-10-04-migrate-to-llsp-upstream-gates/gates.md` (§G1 measurement). G4: met —
   route proven, dependency approval recorded — in
-  `../migrate-to-llsp-host-feasibility/feasibility.md` (§Gate consequence).
+  `../2026-10-04-migrate-to-llsp-host-feasibility/feasibility.md` (§Gate consequence).
   G3: unmet and a release blocker, in the baseline record. G5: open, owned by
   the acceptance child. Each state is read from its owner record; none is
   restated as a second authority here.

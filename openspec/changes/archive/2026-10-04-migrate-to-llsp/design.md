@@ -2,7 +2,7 @@
 
 ## Context
 
-The archived change `add-lispico-development-support` (archived 2026-10-01 as `2026-10-01-add-lispico-development-support`) planned a language server and batch checker inside go-lispico (`lispico-lsp`, `lispico-check`) to serve the two opt-in Lispico modes. Its entire server-launch requirement is a no-download, no-Roswell adapter over a binary that does not exist. The canonical Lispico baselines it prepared now exist under `openspec/specs/lispico-*`, and this change is the sole normative delta carrier for the two server-integration capabilities (see the cutover's [amendment map](../migrate-to-llsp-cutover/amendment.md)).
+The archived change `add-lispico-development-support` (archived 2026-10-01 as `2026-10-01-add-lispico-development-support`) planned a language server and batch checker inside go-lispico (`lispico-lsp`, `lispico-check`) to serve the two opt-in Lispico modes. Its entire server-launch requirement is a no-download, no-Roswell adapter over a binary that does not exist. The canonical Lispico baselines it prepared now exist under `openspec/specs/lispico-*`, and this change is the sole normative delta carrier for the two server-integration capabilities (see the cutover's [amendment map](../2026-10-04-migrate-to-llsp-cutover/amendment.md)).
 
 `llsp` (`github.com/victorzhuk/llsp`, Apache-2.0, Rust) already ships those dialects. Verified at `v0.2.0`, `88e3e72`:
 
@@ -18,7 +18,7 @@ Design depth: Standard. Verification mode: **existing-service-strict**. This is 
 
 **Superseded history — 2026-10-02.** Everything below is a measurement of llsp
 `v0.2.0` (`88e3e72`), code that no longer ships. The current gate authority is
-[`migrate-to-llsp-upstream-gates/gates.md`](../migrate-to-llsp-upstream-gates/gates.md):
+[`migrate-to-llsp-upstream-gates/gates.md`](../2026-10-04-migrate-to-llsp-upstream-gates/gates.md):
 on `v0.2.1` (`436bc84`) G1 is **met** (the language-ID retention fix is
 observed live), and the host-aware parity and analysis gaps (F3) remain **unmet
 and block release**. These `v0.2.0` findings are preserved as the history that
@@ -59,13 +59,13 @@ The feasibility task therefore asks a single question: whether the host can comp
 
 ### 4. `.lispico.json` stays a reviewed gate, not a shipped option
 
-llsp reads no `.lispico.json` and there is no upstream proposal for one. The parent change's `project_file` initialization option and its JSON schemas therefore **cannot** be assumed supported by llsp. This was verified by the feasibility child: llsp reads initialization options but accepts no project-file setting (its project file is `.llsp.toml` at the workspace root), so `project_file` was removed from the example settings and the three shipped schemas carry the reviewed-gate `$comment` marking — recorded in [`migrate-to-llsp-host-feasibility/feasibility.md`](../migrate-to-llsp-host-feasibility/feasibility.md), which owns that answer.
+llsp reads no `.lispico.json` and there is no upstream proposal for one. The parent change's `project_file` initialization option and its JSON schemas therefore **cannot** be assumed supported by llsp. This was verified by the feasibility child: llsp reads initialization options but accepts no project-file setting (its project file is `.llsp.toml` at the workspace root), so `project_file` was removed from the example settings and the three shipped schemas carry the reviewed-gate `$comment` marking — recorded in [`migrate-to-llsp-host-feasibility/feasibility.md`](../2026-10-04-migrate-to-llsp-host-feasibility/feasibility.md), which owns that answer.
 
 Rejected: filtering unknown initialization options out before sending them. That would silently discard user configuration, and the cutover explicitly prohibits config wrapping, config suppression, and any "reopen so the server picks it up" trick. An option the server rejects is surfaced as a configuration error.
 
 ### 5. The predecessor is amended against the canonical baseline, not rewritten
 
-The predecessor change is archived (`2026-10-01-add-lispico-development-support`), and the canonical Lispico baselines it prepared now exist under `openspec/specs/`. The amendment of its server identities, merged launch ownership, contradictory no-download/Roswell wording and analyzer/checker ownership is audited against those canonical baselines in the cutover's [amendment map](../migrate-to-llsp-cutover/amendment.md), which records each class as already satisfied in the canonical text and authors no duplicate delta. Catalog and declaration ownership stays with go-lispico/zhk/Yagel.
+The predecessor change is archived (`2026-10-01-add-lispico-development-support`), and the canonical Lispico baselines it prepared now exist under `openspec/specs/`. The amendment of its server identities, merged launch ownership, contradictory no-download/Roswell wording and analyzer/checker ownership is audited against those canonical baselines in the cutover's [amendment map](../2026-10-04-migrate-to-llsp-cutover/amendment.md), which records each class as already satisfied in the canonical text and authors no duplicate delta. Catalog and declaration ownership stays with go-lispico/zhk/Yagel.
 
 Untouched: dialect syntax, context selection, catalog and library requirements, zhk route order, Yagel layers and phases, `.lispico.json` schema intent, opt-in suffix semantics, task completion marks, upstream task ownership and the review's source-evidence pass. No requirement is deleted, no open task is marked done, and no catalog-owned capability is silently reassigned to llsp.
 
@@ -82,11 +82,11 @@ table points at them and holds no second copy:
 
 | Gate | Requirement | Authoritative record |
 |---|---|---|
-| G1 Language-ID retention across settings reload | `Dialect identity is stable for the life of a buffer` | [`migrate-to-llsp-upstream-gates/gates.md`](../migrate-to-llsp-upstream-gates/gates.md) — met on `v0.2.1` (`436bc84`) |
-| G2 Wire identifier shape matches a declared dialect ID | `Explicit language identifier map` | [`migrate-to-llsp-cutover/design.md`](../migrate-to-llsp-cutover/design.md), Identifier-map evidence |
-| G3 Host-aware context, catalog, phase parity | `Host-aware release gates` | [`migrate-to-llsp-upstream-gates/gates.md`](../migrate-to-llsp-upstream-gates/gates.md) — unmet on `v0.2.1`, blocks release |
-| G4 Digest and extraction feasibility in the WASM host | `llsp binary resolution precedence` | [`migrate-to-llsp-host-feasibility/feasibility.md`](../migrate-to-llsp-host-feasibility/feasibility.md), Gate consequence — met with dependency approval |
-| G5 Real-server proof | Full proof tasks | [`migrate-to-llsp-acceptance/acceptance.md`](../migrate-to-llsp-acceptance/acceptance.md), Real-server proof status |
+| G1 Language-ID retention across settings reload | `Dialect identity is stable for the life of a buffer` | [`migrate-to-llsp-upstream-gates/gates.md`](../2026-10-04-migrate-to-llsp-upstream-gates/gates.md) — met on `v0.2.1` (`436bc84`) |
+| G2 Wire identifier shape matches a declared dialect ID | `Explicit language identifier map` | [`migrate-to-llsp-cutover/design.md`](../2026-10-04-migrate-to-llsp-cutover/design.md), Identifier-map evidence |
+| G3 Host-aware context, catalog, phase parity | `Host-aware release gates` | [`migrate-to-llsp-upstream-gates/gates.md`](../2026-10-04-migrate-to-llsp-upstream-gates/gates.md) — unmet on `v0.2.1`, blocks release |
+| G4 Digest and extraction feasibility in the WASM host | `llsp binary resolution precedence` | [`migrate-to-llsp-host-feasibility/feasibility.md`](../2026-10-04-migrate-to-llsp-host-feasibility/feasibility.md), Gate consequence — met with dependency approval |
+| G5 Real-server proof | Full proof tasks | [`migrate-to-llsp-acceptance/acceptance.md`](../2026-10-04-migrate-to-llsp-acceptance/acceptance.md), Real-server proof status |
 
 **Implementation admission** — a separately recorded authorization that
 explicitly admits an atomic unreleased development cutover while G3 and G5
@@ -105,7 +105,7 @@ setting or a substitute for the gate, and falling back to suffix or
 
 This change was approved as specification preparation; specification
 preparation alone authorizes no implementation. A separate authorization —
-recorded in [`migrate-to-llsp-cutover/design.md`](../migrate-to-llsp-cutover/design.md)
+recorded in [`migrate-to-llsp-cutover/design.md`](../2026-10-04-migrate-to-llsp-cutover/design.md)
 (§Authorization record) — names who granted it, when, and that it explicitly
 admits the atomic unreleased development cutover while G3 and G5 remain open;
 the cutover's implementation started only under that recorded authorization.

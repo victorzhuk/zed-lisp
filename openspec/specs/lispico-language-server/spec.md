@@ -7,7 +7,7 @@ Connect Zed to a native static Lispico service for accurate semantic editing of 
 
 ### Requirement: Lispico mode isolation from ordinary Common Lisp
 
-The extension SHALL route `Lispico Clojure` and `Lispico CL` buffers to the shared language server with their explicit language identifiers, and SHALL keep their configuration independent of any other language's settings. Registered server entries, language identifiers, binary resolution, cache handling, and settings forwarding are owned by the `llsp-language-server-integration` capability in [migrate-to-llsp](../../../migrate-to-llsp/proposal.md); this requirement covers only what a Lispico buffer must observe. Launch SHALL never evaluate runtime code, run a host session, or execute project sources.
+The extension SHALL route `Lispico Clojure` and `Lispico CL` buffers to the shared language server with their explicit language identifiers, and SHALL keep their configuration independent of any other language's settings. Registered server entries, language identifiers, binary resolution, cache handling, and settings forwarding are owned by the [llsp-language-server-integration](../llsp-language-server-integration/spec.md) capability; this requirement covers only what a Lispico buffer must observe. Launch SHALL never evaluate runtime code, run a host session, or execute project sources.
 
 #### Scenario: Explicit binary settings
 - **WHEN** a user configures a binary path, arguments, and environment for the Lispico modes
