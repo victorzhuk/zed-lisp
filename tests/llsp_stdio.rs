@@ -54,13 +54,14 @@ impl Candidate {
             canonical.is_file(),
             "{purpose}: {raw:?} must be a regular llsp binary"
         );
+        // Process-unique plus counter-unique: parallel tests must never share
+        // a sandbox, or one copy's write handle makes the other's exec fail
+        // with ETXTBSY.
+        static NEXT_SANDBOX: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let sandbox = std::env::temp_dir().join(format!(
             "llsp-acceptance-binary-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
+            NEXT_SANDBOX.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
         ));
         std::fs::create_dir_all(&sandbox).expect("sandbox is creatable");
         std::fs::copy(&canonical, sandbox.join("llsp"))
@@ -78,12 +79,30 @@ impl Candidate {
     }
 
     fn version(&self) -> String {
-        let output = Command::new("./llsp")
-            .arg("--version")
-            .current_dir(&self.sandbox)
-            .output()
-            .expect("the sandboxed llsp binary starts for --version");
+        let output = self.spawn_with_retry(|sandbox| {
+            Command::new("./llsp")
+                .arg("--version")
+                .current_dir(sandbox)
+                .output()
+        });
         String::from_utf8_lossy(&output.stdout).trim().to_string()
+    }
+
+    /// Runs a spawn against the sandbox, retrying briefly on ETXTBSY: a
+    /// concurrently finishing copy can leave the fresh binary momentarily
+    /// busy, which is an environment artifact, never a candidate defect.
+    fn spawn_with_retry<T>(&self, spawn: impl Fn(&Path) -> std::io::Result<T>) -> T {
+        let mut attempts = 0;
+        loop {
+            attempts += 1;
+            match spawn(&self.sandbox) {
+                Ok(result) => return result,
+                Err(err) if err.kind() == std::io::ErrorKind::ExecutableFileBusy && attempts < 5 => {
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+                Err(err) => panic!("the sandboxed llsp binary could not be started: {err}"),
+            }
+        }
     }
 }
 
@@ -140,15 +159,17 @@ struct Server {
 /// inside the candidate's private sandbox, with HOME/XDG_CONFIG_HOME and the
 /// working directory pointed at the isolated `root`.
 fn spawn_server(root: &Path, candidate: &Candidate) -> Server {
-    let mut child = Command::new("./llsp")
-        .current_dir(&candidate.sandbox)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .env("HOME", root)
-        .env("XDG_CONFIG_HOME", root)
-        .spawn()
-        .expect("real llsp server must start; resolution failure is never skipped");
+    let mut child = candidate
+        .spawn_with_retry(|sandbox| {
+            Command::new("./llsp")
+                .current_dir(sandbox)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .env("HOME", root)
+                .env("XDG_CONFIG_HOME", root)
+                .spawn()
+        });
     let stdout = child.stdout.take().expect("piped stdout");
     let stdin = child.stdin.take().expect("piped stdin");
     let inbox: Inbox = std::sync::Arc::new((
