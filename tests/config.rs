@@ -1133,6 +1133,41 @@ fn template_contexts_do_not_overlap_on_representative_paths() {
     }
 }
 
+/// The strings a workspace `file_types` glob is matched against for a file of a
+/// visible local worktree: the extension, the basename, and the path with the
+/// worktree directory name as its first segment. Zed compiles the glob with
+/// `globset` defaults and anchors it, so a pattern that begins with a directory
+/// of the repository — `rules/**/*.clj` — matches none of these and silently
+/// selects nothing.
+fn zed_file_type_candidates(project: &str, relative_path: &str) -> Vec<String> {
+    let basename = relative_path.rsplit('/').next().unwrap();
+    let extension = basename.rsplit_once('.').map_or(basename, |(_, ext)| ext);
+    vec![
+        extension.to_string(),
+        basename.to_string(),
+        format!("{project}/{relative_path}"),
+    ]
+}
+
+#[test]
+fn template_file_types_patterns_are_anchored_not_repository_relative() {
+    // The regression these templates shipped with: a directory-anchored pattern
+    // reads as project-relative but selects nothing in Zed.
+    let candidates = zed_file_type_candidates("yagel", "rules/defaults/doctor.clj");
+    assert!(
+        !candidates
+            .iter()
+            .any(|candidate| glob_match("rules/**/*.clj", candidate)),
+        "a directory-anchored pattern must not select: {candidates:?}"
+    );
+    assert!(
+        candidates
+            .iter()
+            .any(|candidate| glob_match("**/rules/**/*.clj", candidate)),
+        "a `**/`-prefixed pattern must select: {candidates:?}"
+    );
+}
+
 #[test]
 fn template_file_types_select_the_documented_modes() {
     for (project, fixtures) in template_fixtures() {
@@ -1145,10 +1180,15 @@ fn template_file_types_select_the_documented_modes() {
         let file_types = settings["file_types"].as_object().unwrap();
 
         for (path, expected_mode) in fixtures {
+            let candidates = zed_file_type_candidates(project, path);
             let mut selected = Vec::new();
             for (mode, patterns) in file_types {
                 for pattern in patterns.as_array().unwrap() {
-                    if glob_match(pattern.as_str().unwrap(), path) {
+                    if candidates
+                        .iter()
+                        .any(|candidate| glob_match(pattern.as_str().unwrap(), candidate))
+                        && !selected.contains(mode)
+                    {
                         selected.push(mode.clone());
                     }
                 }

@@ -1,7 +1,7 @@
 {
   "file_types": {
-    "Lispico Clojure": ["internal/goldset/testdata/**/*.lisp"],
-    "Lispico CL": ["corpus/**/*.lisp"]
+    "Lispico Clojure": ["**/internal/goldset/testdata/**/*.lisp"],
+    "Lispico CL": ["**/corpus/**/*.lisp"]
   },
   "languages": {
     "Lispico Clojure": {

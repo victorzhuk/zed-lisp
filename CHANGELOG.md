@@ -1,3 +1,10 @@
+## Unreleased
+
+### Fixed
+
+- Fix the Lispico mode templates and the README association example so their `file_types` patterns select anything in Zed. Zed anchors each pattern against the file extension, the file name, and the worktree-prefixed path, so the shipped patterns (`rules/**/*.clj`, `workflows/**/*.lisp`) matched none of them and left the modes unselected — the association silently did nothing and the `llsp` server never started
+- Make the template test model those candidates instead of the repository-relative paths it assumed, and pin the anchored form the templates now ship (`**/rules/**/*.clj` selects, `rules/**/*.clj` does not)
+
 ## 0.6.0 (2026-10-05)
 
 ### Added

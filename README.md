@@ -53,10 +53,12 @@ Lispico modes are opt-in. Add a workspace `file_types` association in the projec
 ```json
 {
   "file_types": {
-    "Lispico Clojure": ["workflows/**/*.lisp"]
+    "Lispico Clojure": ["**/workflows/**/*.lisp"]
   }
 }
 ```
+
+Zed matches each pattern in full against three strings: the file extension, the file name, and the path whose first segment is the worktree directory name (`zhk/workflows/plan/main.lisp`). A pattern that starts with a directory of the repository — `workflows/**/*.lisp` — matches none of them and selects nothing. Prefix such a pattern with `**/`.
 
 Ready-made templates for all three target projects live in [`examples/`](examples/README.md) — zhk, Yagel, and go-lispico — each with a `.zed/settings.json`, a `.lispico.json` context configuration, and opt-in host snippets. Copy them into the target repository.
 

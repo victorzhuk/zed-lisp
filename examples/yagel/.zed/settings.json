@@ -1,6 +1,6 @@
 {
   "file_types": {
-    "Lispico Clojure": ["rules/**/*.clj", "packs/**/*.clj"]
+    "Lispico Clojure": ["**/rules/**/*.clj", "**/packs/**/*.clj"]
   },
   "languages": {
     "Lispico Clojure": {

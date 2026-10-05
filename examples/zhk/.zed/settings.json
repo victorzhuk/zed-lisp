@@ -1,6 +1,6 @@
 {
   "file_types": {
-    "Lispico Clojure": ["workflows/**/*.lisp"]
+    "Lispico Clojure": ["**/workflows/**/*.lisp"]
   },
   "languages": {
     "Lispico Clojure": {
