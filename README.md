@@ -34,8 +34,9 @@ Note: Yagel's existing `rules check` remains an independent host-side check; it 
    cd zed-lisp
    ```
 
-2. Build the extension:
+2. Build the extension (the wasm target is installed with the toolchain):
    ```bash
+   rustup target add wasm32-wasip2
    cargo build --release --target wasm32-wasip2
    ```
 
@@ -120,6 +121,7 @@ Limitations below are recorded against the pinned llsp release (`v0.2.1`, commit
 
 2. Build the WebAssembly extension:
    ```bash
+   rustup target add wasm32-wasip2
    cargo build --release --target wasm32-wasip2
    ```
 
@@ -130,12 +132,13 @@ Limitations below are recorded against the pinned llsp release (`v0.2.1`, commit
 Tests run through a wrapper with a finite wall-clock limit and explicit worker caps; the same limits apply locally and in CI. A failing test or a timeout both fail the run:
 
 ```sh
-make test          # bounded: 300s build and test limits, 4 build jobs, 4 test threads
+make test          # bounded: 300s build and test limits, 4 build jobs, 4 test threads; hermetic
+make acceptance    # opt-in: the real-server suite, needs LLSP_BINARY or llsp on PATH
 ```
 
 Override the bounds when needed: `make test BUILD_TIMEOUT_SECONDS=600 TEST_TIMEOUT_SECONDS=600`.
 
-The real-server acceptance tests in `tests/llsp_stdio.rs` drive a real `llsp` binary over stdio; they validate the candidate against the pinned release before running and fail loudly when no pinned binary is available (`LLSP_BINARY` selects it; it defaults to the documented install path).
+The real-server acceptance tests in `tests/llsp_stdio.rs` drive a real `llsp` binary over stdio and are excluded from the hermetic `make test` run: `make acceptance` invokes them, validates the candidate against the pinned release before running, and fails loudly when no pinned binary is available (`LLSP_BINARY` selects it; otherwise the first `llsp` on `PATH` is validated).
 
 ### Project Structure
 
@@ -164,10 +167,10 @@ The extension is built as a WebAssembly module using the Zed extension API:
 - **Server dispatch** — The extension registers a single `[language_servers.llsp]` entry for `Common Lisp`, `Lispico Clojure`, and `Lispico CL`, with an explicit `language_ids` map; the wire identifier is never computed or normalized in Rust. Dispatch rejects every other server ID, and the packaging check fails any manifest that reintroduces a previous server or drops an identifier. Resolution order (fixed):
   - configured binary path from `lsp.llsp.binary`
   - `llsp` found through `PATH`
-  - a complete verified cache entry for the pinned version and platform (reused offline, with zero network access)
-  - the verified release download: fetch the archive as raw bytes, SHA-256 it against the published `SHA256SUMS` entry, extract only on a match, mark the binary executable through the host API, and record the entry's completion state last
+  - a complete verified cache entry for the pinned version, platform, and published asset — reused offline with zero network access, and only while its binary still hashes to the digest recorded at install time
+  - the verified release download: fetch the archive as raw bytes, SHA-256 it against the published `SHA256SUMS` entry, extract only on a match inside bounded per-member and total budgets with every member confined to the cache entry, mark the binary executable through the host API, and record the entry's completion state — including the installed binary's digest — last
 - **Tree-sitter grammars** — [tree-sitter-commonlisp](https://github.com/tree-sitter-grammars/tree-sitter-commonlisp) (pinned `3232350`) for Common Lisp, [tree-sitter-clojure](https://github.com/sogaiu/tree-sitter-clojure) (pinned `e43eff8`) for both Lispico modes; both are registered in `extension.toml` and vendored as pinned submodules for the test harness
-- **Verification** — `make test` parses the corpus fixtures from the three target projects plus Common Lisp regressions against the pinned grammars, compiles every shipped query, validates the templates and schemas, exercises the resolution chain's behavior contract (precedence, digest mismatch, interrupted downloads, pruning, offline reuse, unsupported platforms), and runs the real-server stdio acceptance suite against the pinned llsp build. The packaged-resource check (`scripts/check_package.py`, also runnable alone as `make check-package`) additionally fails a manifest whose server entry lacks an explicit language identifier or that declares any server other than `llsp`
+- **Verification** — `make test` parses the corpus fixtures from the three target projects plus Common Lisp regressions against the pinned grammars, compiles every shipped query, validates the templates and schemas, and exercises the resolution chain's behavior contract (precedence, digest mismatch, interrupted downloads, pruning, offline reuse, unsupported platforms, hostile archive members, cache-binary tampering). The real-server stdio acceptance suite against the pinned llsp build is opt-in via `make acceptance`. The packaged-resource check (`scripts/check_package.py`, also runnable alone as `make check-package`) additionally fails a manifest whose server entry lacks an explicit language identifier or that declares any server other than `llsp`
 
 ## Links
 

@@ -1,18 +1,23 @@
-## Unreleased
+## 0.6.0 (2026-10-05)
 
 ### Added
 
 - Add `schemas/lispico-packs.schema.json`, the version-1 shape of an installed-pack snapshot: `source_revision`, `selection_generation`, the installed `packs`, the `entries` each contributed, and the `problems` recorded while reading them. A readable entry carries its pack-relative `source` and `source_digest`; an unreadable one carries neither
 - Add `source_files` to the declaration catalog schema: a duplicate-free list of unique relative paths (256 max) paired with the aggregate `source_fingerprint` it was computed over. The pairing is two-way — `source_files` and `source_fingerprint` are either both present or both absent, never one alone. The paths carry no per-file digests
 - Add `snapshot` and `expected_fingerprint` to the project schema so a `packs` layer selects either a live `root` or a locked snapshot — never both, never neither. `snapshot` and `expected_fingerprint` are forbidden on the other layer kinds. `expected_fingerprint` is a `sha256:`-prefixed lowercase digest over the snapshot document's raw JSON bytes, not over the source content the snapshot lists; the snapshot schema carries no fingerprint property, so the consumer hashes the bytes it reads. A pack's `digest` stays an opaque store identity, deliberately unlike those prefixed digests
+- Add `make acceptance` as the opt-in entry point for the real-server stdio acceptance suite (`tests/llsp_stdio.rs`); the suite selects its candidate from `LLSP_BINARY` or the first `llsp` on `PATH` and still fails loudly on a missing, wrong-version, or non-starting server
 
 ### Changed
 
 - Serve all three language modes — `Common Lisp`, `Lispico Clojure`, and `Lispico CL` — through one shared `llsp` language server entry with an explicit language-ID map; the previous `sextant` and `lispico` entries and their resolution code are removed. The extension resolves `llsp` as a configured binary, then `llsp` on `PATH`, then a checksum-verified release download pinned to llsp v0.2.1 (SHA-256 against the published `SHA256SUMS` before extraction, verified offline cache reuse, and one actionable error naming the supported platforms — Linux x86_64, Linux aarch64, macOS x86_64, macOS aarch64, Windows x86_64; Windows aarch64 has no published archive). Roswell, source builds, and installer scripts are gone. Host-aware catalog, library, and phase analysis remains an open upstream gap on this pin (see the README limitations)
+- Harden the verified-release install: archive members may extract only inside the cache entry's payload directory (rooted paths, Windows prefixes, and parent traversal are rejected in both the tar and zip extractors), and extraction is bounded by per-member and total size caps. A future re-pin can no longer silently inherit a weaker extraction boundary
+- Verify a cache entry before every reuse: the completion state now also records the installed binary's SHA-256, and an entry whose binary no longer matches that digest, or whose recorded asset is not the published archive for the current platform, is re-resolved instead of started
+- Keep `make test` hermetic: the real-server acceptance suite is `#[ignore]`-gated and runs through `make acceptance`, so CI and ordinary local runs no longer need a provisioned llsp binary
 - Move the project and declaration-catalog schemas to `schema_version: 2` and the three `examples/` templates with them. `source_fingerprint` is now a lowercase SHA-256 instead of any non-empty string, and a `packs` layer no longer requires `root`
 - Tighten the packaged-resource check to cover the new snapshot schema alongside the project and catalog schemas. The check asserts only that each declared resource is present and that each shipped schema parses as JSON; the test suite is what compiles and validates documents against the schemas
 - Record what the schemas deliberately do not do. No code yet reads a `source_root` checkout, derives a fingerprint, captures an installed-pack snapshot, or hashes a snapshot's raw bytes against an `expected_fingerprint` pin; host context resolution, snapshot ordering, and symlink- and race-safe reads are equally unwritten. That work belongs to go-lispico and the host projects, and [llsp](https://github.com/victorzhuk/llsp) — a separate, future primary Lispico server whose 0.2.1 implements none of the schema-version-2 contracts, including host contexts, and which is not a release of the `lispico-lsp` binary the extension resolves — implements none of it
 - Correct the documentation of the `lispico` server prerequisite: the extension resolves a `lispico-lsp` binary you supply, and go-lispico is the runtime the modes and catalogs target rather than a shipped source of that legacy server
+- Commit `Cargo.lock` so the shipped cdylib builds reproducibly from pinned dependency versions
 
 ## 0.5.2 (2026-09-26)
 
