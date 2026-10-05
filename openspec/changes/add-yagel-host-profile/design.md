@@ -16,7 +16,7 @@ Testing depth: **existing-service-strict**. Deterministic contract evidence plus
 
 ## Reviewed owner execution plan
 
-Consume the approved [shared contracts](../../../../changes/add-lispico-development-support/contracts.md) and the completed local schema/resource prerequisite. Implementation remains separately authorized upstream. Start after the [zhk host profile](../add-zhk-host-profile/proposal.md) has landed its declared-source fingerprint producer: Yagel reuses that framing rather than defining a second one, so the two host catalogs verify under one canonical form.
+Consume the approved [shared contracts](../archive/2026-10-01-add-lispico-development-support/contracts.md) and the completed local schema/resource prerequisite. Implementation remains separately authorized upstream. Start after the [zhk host profile](../add-zhk-host-profile/proposal.md) has landed its declared-source fingerprint producer: Yagel reuses that framing rather than defining a second one, so the two host catalogs verify under one canonical form.
 
 Planning baseline: Yagel `a984f4eea2615e2744521321f586f77f9ee698d1`, with unrelated Makefile and OpenSpec edits and active worktrees. Earlier `332ac33e` reconnaissance is stale; use the current primitive-name, staging, workflow-prelude, and packstore seams. Runtime stays go-lispico v0.14.0.
 

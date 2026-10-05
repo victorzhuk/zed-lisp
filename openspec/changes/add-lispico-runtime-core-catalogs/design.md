@@ -18,7 +18,7 @@ Testing depth: **existing-service-strict**. Deterministic contract evidence plus
 
 ## Reviewed owner execution plan
 
-Consume the approved [shared contracts](../../../../changes/add-lispico-development-support/contracts.md) and the completed local schema/resource prerequisite. Implementation remains separately authorized upstream.
+Consume the approved [shared contracts](../archive/2026-10-01-add-lispico-development-support/contracts.md) and the completed local schema/resource prerequisite. Implementation remains separately authorized upstream.
 
 Planning baseline: go-lispico `12e0990147c41a78186ad9424fb70a6369fab544`; both hosts instead pin v0.14.0 at `c68e2c8452798b383833d56e58b388d7241f2413`. Generate host-adjacent runtime catalogs from that exact source tree. Do not upgrade hosts or claim checkout HEAD metadata describes the release. Preserve unrelated worktrees and concurrent edits.
 

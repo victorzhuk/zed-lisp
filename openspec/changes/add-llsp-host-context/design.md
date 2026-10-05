@@ -16,7 +16,7 @@ Testing depth: **existing-service-strict**. Deterministic contract evidence plus
 
 ## Reviewed owner execution plan
 
-Consume the approved [shared contracts](../../../../changes/add-lispico-development-support/contracts.md), the completed local schema/resource prerequisite, the runtime catalogs, the analyzer parity work, and both host profiles. Metadata and profile producers can develop independently after the wire contracts are fixed; final integration waits for all of them.
+Consume the approved [shared contracts](../archive/2026-10-01-add-lispico-development-support/contracts.md), the completed local schema/resource prerequisite, the runtime catalogs, the analyzer parity work, and both host profiles. Metadata and profile producers can develop independently after the wire contracts are fixed; final integration waits for all of them.
 
 Planning baseline: llsp v0.2.1 at `436bc84c0f520c424d6b7a1c086f38e1ce0448e8`. The current global name store and boolean defined-name predicate cannot carry contextual arity, cell, phase, and provenance on their own.
 

@@ -18,7 +18,7 @@ No capability deltas. The parent owns all language, context, catalog, server, an
 
 ## Dependencies
 
-- [add-lispico-development-support](../../../../changes/add-lispico-development-support/proposal.md)
+- [add-lispico-development-support](../archive/2026-10-01-add-lispico-development-support/proposal.md)
 - [add-lispico-runtime-core-catalogs](../add-lispico-runtime-core-catalogs/proposal.md)
 
 The parent dependency means its completed corpus and schema resources and explicit upstream approval task 3.1, not its final archive. Catalog and host-context records are downstream consumers; the analyzer does not own their visibility.

@@ -20,7 +20,7 @@ No capability deltas. The parent owns all language, context, catalog, server, an
 
 ## Dependencies
 
-- [add-lispico-development-support](../../../../changes/add-lispico-development-support/proposal.md)
+- [add-lispico-development-support](../archive/2026-10-01-add-lispico-development-support/proposal.md)
 - [add-lispico-runtime-core-catalogs](../add-lispico-runtime-core-catalogs/proposal.md)
 - [add-lispico-dialect-analyzer-checker](../add-lispico-dialect-analyzer-checker/proposal.md)
 - [add-zhk-host-profile](../add-zhk-host-profile/proposal.md)

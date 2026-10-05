@@ -61,12 +61,12 @@ User-configured arguments and environment variables from `LspSettings` SHALL be 
 - **WHEN** a downloaded archive does not match the published digest
 - **THEN** the extension reports a verification failure, does not start a binary, and does not record an installed cache entry
 
-#### Scenario: Roswell build when no downloadable binary
+#### Scenario: No downloadable binary for the platform
 
 - **WHEN** no user-configured path is set, `llsp` is not on `PATH`, and the platform has no published archive
 - **THEN** the extension reports an actionable error naming the supported platforms and the configuration, `PATH`, and cache remedies, and does not attempt a Roswell installation
 
-#### Scenario: Roswell build fails
+#### Scenario: A download, digest, or extraction step fails
 
 - **WHEN** a release download, digest verification, or extraction step fails
 - **THEN** the extension reports `Failed` status with the reason and the same remedies, having attempted no Roswell installation and no source build

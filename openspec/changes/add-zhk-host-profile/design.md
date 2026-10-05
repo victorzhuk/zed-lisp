@@ -16,7 +16,7 @@ Testing depth: **existing-service-strict**. Deterministic contract evidence plus
 
 ## Reviewed owner execution plan
 
-Consume the approved [shared contracts](../../../../changes/add-lispico-development-support/contracts.md) and the completed local schema/resource prerequisite. Implementation remains separately authorized upstream.
+Consume the approved [shared contracts](../archive/2026-10-01-add-lispico-development-support/contracts.md) and the completed local schema/resource prerequisite. Implementation remains separately authorized upstream.
 
 Planning baseline advanced to zhk `5052b8e1720814daa61ccc92a7e498c5e027ddfa` during reconnaissance. Refresh anchors before dispatch and preserve other active worktrees. Runtime stays go-lispico v0.14.0.
 

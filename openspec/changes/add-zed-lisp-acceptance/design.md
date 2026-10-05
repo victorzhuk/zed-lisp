@@ -16,7 +16,7 @@ Testing depth: **existing-service-strict**. Deterministic contract evidence plus
 
 ## Reviewed acceptance sequence
 
-The approved [shared contracts](../../../../changes/add-lispico-development-support/contracts.md) and the completed local schema/resource prerequisite are available. Wait for every owner implementation and the independent server migration. Do not treat protocol smoke as actual Zed proof.
+The approved [shared contracts](../archive/2026-10-01-add-lispico-development-support/contracts.md) and the completed local schema/resource prerequisite are available. The independent server migration (`migrate-to-llsp`) completed and was archived on 2026-10-04; the remaining wait is every owner implementation. Do not treat protocol smoke as actual Zed proof.
 
 1. Record exact extension, `llsp`, runtime, host, catalog, and snapshot revisions plus fixture selection. Re-check opt-in associations and explicit server language IDs without changing ordinary Common Lisp defaults.
 2. Exercise both runtime dialects in Zed: real completion, signatures, references and definitions, known diagnostics, and valid snippets. Use unsaved Unicode edits and observe error replacement at the displayed source ranges.

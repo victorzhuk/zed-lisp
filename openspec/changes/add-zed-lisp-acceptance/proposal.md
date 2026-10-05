@@ -19,15 +19,15 @@ No capability deltas. The parent owns all language, context, catalog, server, an
 
 ## Dependencies
 
-- [add-lispico-development-support](../../../../changes/add-lispico-development-support/proposal.md)
+- [add-lispico-development-support](../archive/2026-10-01-add-lispico-development-support/proposal.md)
 - [add-lispico-runtime-core-catalogs](../add-lispico-runtime-core-catalogs/proposal.md)
 - [add-lispico-dialect-analyzer-checker](../add-lispico-dialect-analyzer-checker/proposal.md)
 - [add-zhk-host-profile](../add-zhk-host-profile/proposal.md)
 - [add-yagel-host-profile](../add-yagel-host-profile/proposal.md)
 - [add-llsp-host-context](../add-llsp-host-context/proposal.md)
-- [migrate-to-llsp](../../../../changes/migrate-to-llsp/proposal.md) (separate, already-active sibling change)
+- [migrate-to-llsp](../archive/2026-10-04-migrate-to-llsp/proposal.md) (separate sibling change, completed and archived 2026-10-04)
 
-The parent dependency means its completed corpus and schema resources and explicit upstream approval task 3.1, not its final archive. The separate shared-server migration in `migrate-to-llsp` is a prerequisite of the editor path; this record waits on it but does not own its content.
+The parent dependency means its completed corpus and schema resources and explicit upstream approval task 3.1, not its final archive. The shared-server migration in `migrate-to-llsp` was a prerequisite of the editor path and has completed with its gates met (G1, G2, G4, G5; G3 remains open upstream); this record no longer waits on it but does not own its content.
 
 ## Impact
 
