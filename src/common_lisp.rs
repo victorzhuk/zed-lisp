@@ -17,6 +17,12 @@ const COMPLETION_STATE_FILE: &str = "complete.json";
 const SUPPORTED_PLATFORMS: &str =
     "Linux x86_64, Linux aarch64, macOS x86_64, macOS aarch64, Windows x86_64";
 
+/// Extraction budgets. A digest-verified release stays orders of magnitude
+/// below both; the caps exist so a future re-pin cannot silently widen what
+/// extraction is allowed to write.
+const MAX_MEMBER_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_TOTAL_BYTES: u64 = 512 * 1024 * 1024;
+
 /// Rejects every id except the one registered server; both previous server
 /// ids are unknown here, and no id ever falls through to another server.
 fn dispatch_language_server(id: &str) -> Result<(), String> {
@@ -123,7 +129,8 @@ fn resolution_error(reason: &str) -> String {
          Supported platforms: {SUPPORTED_PLATFORMS}. \
          Remedies: (1) set `lsp.llsp.binary.path` in your Zed settings to an \
          installed llsp binary, (2) expose `llsp` on your PATH, or (3) place a \
-         verified llsp binary (with its {COMPLETION_STATE_FILE} marker) in the \
+         verified llsp binary (with its {COMPLETION_STATE_FILE} marker \
+         recording the release digest and the binary's SHA-256) in the \
          extension cache directory llsp-{LLSP_RELEASE_TAG}. \
          Structural highlighting remains available without the server."
     )
@@ -171,6 +178,45 @@ fn sha256_file(path: &Path) -> Result<String, String> {
         .collect())
 }
 
+/// A member path that stays inside the payload directory: relative, no
+/// parent traversal, no Windows prefix. `Path::join` would let an absolute
+/// or prefixed member replace the payload root entirely.
+fn safe_member(member: &Path) -> Result<(), String> {
+    let contained = member
+        .components()
+        .all(|c| matches!(c, Component::Normal(_) | Component::CurDir));
+    if contained {
+        Ok(())
+    } else {
+        Err(format!("unsafe archive member {member:?}"))
+    }
+}
+
+/// Copies one archive member into `out` under the per-member and cumulative
+/// extraction budgets; a member that reaches either cap aborts the install.
+fn copy_member_bounded<R: std::io::Read>(
+    reader: &mut R,
+    out: &mut std::fs::File,
+    member: &Path,
+    total: &mut u64,
+) -> Result<(), String> {
+    let mut limited = reader.take(MAX_MEMBER_BYTES);
+    let written =
+        std::io::copy(&mut limited, out).map_err(|e| format!("extract member {member:?}: {e}"))?;
+    if written >= MAX_MEMBER_BYTES {
+        return Err(format!(
+            "archive member {member:?} reaches the {MAX_MEMBER_BYTES}-byte member budget"
+        ));
+    }
+    *total += written;
+    if *total > MAX_TOTAL_BYTES {
+        return Err(format!(
+            "archive payload exceeds the {MAX_TOTAL_BYTES}-byte extraction budget"
+        ));
+    }
+    Ok(())
+}
+
 /// Extracts the digest-verified archive into `payload_dir`. Only archive
 /// members inside a single top-level directory are accepted; the tar crate
 /// and the zip crate parse the published formats, and no entry may escape
@@ -191,15 +237,14 @@ fn extract_tar_gz(archive: &Path, payload_dir: &Path) -> Result<(), String> {
     let entries = archive
         .entries()
         .map_err(|e| format!("reading archive entries: {e}"))?;
+    let mut total: u64 = 0;
     for entry in entries {
         let mut entry = entry.map_err(|e| format!("archive entry: {e}"))?;
         let member = entry
             .path()
             .map_err(|e| format!("archive member path: {e}"))?
             .to_path_buf();
-        if member.components().any(|c| c == Component::ParentDir) {
-            return Err(format!("unsafe archive member {member:?}"));
-        }
+        safe_member(&member)?;
         let target = payload_dir.join(&member);
         if entry.header().entry_type().is_dir() {
             std::fs::create_dir_all(&target)
@@ -211,8 +256,7 @@ fn extract_tar_gz(archive: &Path, payload_dir: &Path) -> Result<(), String> {
             }
             let mut out = std::fs::File::create(&target)
                 .map_err(|e| format!("create file {member:?}: {e}"))?;
-            std::io::copy(&mut entry, &mut out)
-                .map_err(|e| format!("extract member {member:?}: {e}"))?;
+            copy_member_bounded(&mut entry, &mut out, &member, &mut total)?;
         }
     }
     Ok(())
@@ -221,12 +265,15 @@ fn extract_tar_gz(archive: &Path, payload_dir: &Path) -> Result<(), String> {
 fn extract_zip(archive: &Path, payload_dir: &Path) -> Result<(), String> {
     let file = std::fs::File::open(archive).map_err(|e| format!("open archive: {e}"))?;
     let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("reading zip: {e}"))?;
+    let mut total: u64 = 0;
     for index in 0..zip.len() {
         let mut entry = zip.by_index(index).map_err(|e| format!("zip entry: {e}"))?;
-        let member = entry.name().to_string();
-        if member.split(['/', '\\']).any(|part| part == "..") {
-            return Err(format!("unsafe archive member {member:?}"));
-        }
+        // `enclosed_name` is None exactly for rooted, prefixed, or
+        // parent-traversing member names, which would escape the payload.
+        let member = entry
+            .enclosed_name()
+            .ok_or_else(|| format!("unsafe archive member {:?}", entry.name()))?
+            .to_path_buf();
         let target = payload_dir.join(&member);
         if entry.is_dir() {
             std::fs::create_dir_all(&target)
@@ -238,30 +285,38 @@ fn extract_zip(archive: &Path, payload_dir: &Path) -> Result<(), String> {
             }
             let mut out = std::fs::File::create(&target)
                 .map_err(|e| format!("create file {member:?}: {e}"))?;
-            std::io::copy(&mut entry, &mut out)
-                .map_err(|e| format!("extract member {member:?}: {e}"))?;
+            copy_member_bounded(&mut entry, &mut out, &member, &mut total)?;
         }
     }
     Ok(())
 }
 
 /// The binary of a complete verified cache entry: the entry's completion
-/// state must exist, match the active version and platform, and the binary
-/// must carry an executable bit. An entry missing any of these is not a
-/// verified install and is never started.
-fn verified_cache_binary(root: &Path, platform: &str) -> Option<PathBuf> {
+/// state must exist, match the active version, platform, and published asset
+/// for this platform, and the binary must carry an executable bit and still
+/// hash to the digest recorded when it was verified. An entry missing any of
+/// these is not a verified install and is never started.
+fn verified_cache_binary(root: &Path, platform: (zed::Os, zed::Architecture)) -> Option<PathBuf> {
+    let asset_name = llsp_asset_name(platform)?;
     let entry_dir = root.join(format!("llsp-{LLSP_RELEASE_TAG}"));
     let state = std::fs::read_to_string(entry_dir.join(COMPLETION_STATE_FILE)).ok()?;
     let state: zed::serde_json::Value = zed::serde_json::from_str(&state).ok()?;
     let version = state.get("version").and_then(|v| v.as_str())?;
     let state_platform = state.get("platform").and_then(|v| v.as_str())?;
-    if version != LLSP_RELEASE_TAG || state_platform != platform {
+    let state_asset = state.get("asset").and_then(|v| v.as_str())?;
+    let state_binary_digest = state.get("binary_sha256").and_then(|v| v.as_str())?;
+    if version != LLSP_RELEASE_TAG
+        || state_platform != platform_key(platform)
+        || state_asset != asset_name
+    {
         return None;
     }
-    let binary = entry_dir.join(binary_file_name(
-        state.get("asset").and_then(|v| v.as_str()).unwrap_or(""),
-    ));
+    let binary = entry_dir.join(binary_file_name(asset_name));
     if !executable_file(&binary) {
+        return None;
+    }
+    let observed = sha256_file(&binary).ok()?;
+    if observed != state_binary_digest {
         return None;
     }
     Some(binary)
@@ -369,11 +424,15 @@ fn install_into(
         .map_err(|e| format!("marking the binary executable: {e}"))?;
 
     // Written last: an entry without this state is partial and never started.
+    // The binary digest lets every later cache hit re-verify what it starts.
+    let binary_digest =
+        sha256_file(&binary).map_err(|e| format!("hashing the installed binary: {e}"))?;
     let state = zed::serde_json::json!({
         "version": LLSP_RELEASE_TAG,
         "platform": platform_key(platform),
         "asset": asset_name,
         "digest": observed,
+        "binary_sha256": binary_digest,
     });
     std::fs::write(entry_dir.join(COMPLETION_STATE_FILE), state.to_string())
         .map_err(|e| format!("writing completion state: {e}"))?;
@@ -407,8 +466,7 @@ fn resolve_llsp(
     if let Some(path) = which("llsp") {
         return Ok((PathBuf::from(path), BinarySource::PathHit));
     }
-    let key = platform_key(platform);
-    if let Some(binary) = verified_cache_binary(root, &key) {
+    if let Some(binary) = verified_cache_binary(root, platform) {
         return Ok((binary, BinarySource::VerifiedCache));
     }
     install_verified_release(root, source, platform)

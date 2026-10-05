@@ -22,7 +22,9 @@ target
 /.cursor/
 /.claude/
 /.opencode/
-Cargo.lock
+
+# The lockfile is committed: the shipped cdylib builds digest-verified
+# release artifacts from these pinned dependency versions.
 
 # The user-global gitignore excludes `.zed/` at every depth; re-include the
 # shipped template directories so they reach the package and CI checkout.

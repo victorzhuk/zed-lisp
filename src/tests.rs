@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use zed_extension_api::{self as zed, GithubRelease, GithubReleaseAsset};
-
 const LINUX: (zed::Os, zed::Architecture) = (zed::Os::Linux, zed::Architecture::X8664);
 const LINUX_ASSET: &str = "llsp-x86_64-unknown-linux-musl.tar.gz";
 const WINDOWS: (zed::Os, zed::Architecture) = (zed::Os::Windows, zed::Architecture::X8664);
@@ -16,11 +15,25 @@ const WINDOWS_ASSET: &str = "llsp-x86_64-pc-windows-msvc.zip";
 
 const BINARY_CONTENTS: &[u8] = b"#!/bin/sh\nexit 0\n";
 
-fn scratch_dir(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("llsp-cutover-{}-{}", name, std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir
+/// A named scratch directory that removes itself when the test ends; it
+/// derefs to the directory path so call sites read as before.
+struct Scratch(tempfile::TempDir);
+
+impl std::ops::Deref for Scratch {
+    type Target = Path;
+
+    fn deref(&self) -> &Path {
+        self.0.path()
+    }
+}
+
+fn scratch_dir(name: &str) -> Scratch {
+    Scratch(
+        tempfile::Builder::new()
+            .prefix(&format!("llsp-cutover-{name}-"))
+            .tempdir()
+            .unwrap(),
+    )
 }
 
 fn tar_gz_fixture(member_dir: &str, binary: &str, contents: &[u8]) -> Vec<u8> {
@@ -165,6 +178,7 @@ fn make_cache_entry(root: &Path, asset_name: &str, executable: bool) -> PathBuf 
             "platform": platform_key(LINUX),
             "asset": asset_name,
             "digest": "0".repeat(64),
+            "binary_sha256": sha256_hex(BINARY_CONTENTS),
         })
         .to_string(),
     )
@@ -180,7 +194,7 @@ fn assert_no_usable_entry(root: &Path) {
         entry.display()
     );
     assert!(
-        verified_cache_binary(root, &platform_key(LINUX)).is_none(),
+        verified_cache_binary(root, LINUX).is_none(),
         "a failed attempt must not leave a startable entry"
     );
 }
@@ -288,9 +302,21 @@ fn a_first_installation_downloads_verifies_and_installs() {
     assert_eq!(std::fs::read(&binary).unwrap(), BINARY_CONTENTS);
     let entry = root.join(format!("llsp-{LLSP_RELEASE_TAG}"));
     let state = std::fs::read_to_string(entry.join(COMPLETION_STATE_FILE)).unwrap();
-    assert!(
-        state.contains(LLSP_RELEASE_TAG) && state.contains("sha256") || state.contains("digest"),
-        "completion state must record the verification: {state}"
+    let state: zed::serde_json::Value = zed::serde_json::from_str(&state).unwrap();
+    assert_eq!(
+        state.get("version").and_then(|v| v.as_str()),
+        Some(LLSP_RELEASE_TAG),
+        "completion state must record the installed version: {state}"
+    );
+    assert_eq!(
+        state.get("digest").and_then(|v| v.as_str()).map(str::len),
+        Some(64),
+        "completion state must record the verified archive digest: {state}"
+    );
+    assert_eq!(
+        state.get("binary_sha256").and_then(|v| v.as_str()),
+        Some(sha256_hex(BINARY_CONTENTS).as_str()),
+        "completion state must record the installed binary's digest: {state}"
     );
     assert!(
         source
@@ -333,6 +359,113 @@ fn an_extraction_failure_installs_nothing() {
         "error must name the extraction failure: {error}"
     );
     assert_no_usable_entry(&root);
+}
+
+/// A raw ustar header block with an arbitrary member name, for hostile
+/// fixtures the tar builder itself refuses to produce.
+fn raw_tar_header(name: &str, size: usize) -> Vec<u8> {
+    let mut block = [0u8; 512];
+    block[..name.len()].copy_from_slice(name.as_bytes());
+    block[100..108].copy_from_slice(b"0000644\0");
+    block[108..116].copy_from_slice(b"0000000\0");
+    block[116..124].copy_from_slice(b"0000000\0");
+    let size_octal = format!("{size:011o}\0");
+    block[124..124 + size_octal.len()].copy_from_slice(size_octal.as_bytes());
+    block[148..156].copy_from_slice(b"        ");
+    block[156] = b'0';
+    block[257..262].copy_from_slice(b"ustar");
+    block[263..265].copy_from_slice(b"00");
+    let checksum = block.iter().map(|byte| u64::from(*byte)).sum::<u64>();
+    let checksum_octal = format!("{checksum:06o}\0 ");
+    block[148..156].copy_from_slice(checksum_octal.as_bytes());
+    block.to_vec()
+}
+
+fn hostile_tar_fixture(member: &str, contents: &[u8]) -> Vec<u8> {
+    let encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    let mut tar_bytes = raw_tar_header(member, contents.len());
+    tar_bytes.extend_from_slice(contents);
+    let padding = (512 - contents.len() % 512) % 512;
+    tar_bytes.extend(std::iter::repeat_n(0u8, padding));
+    tar_bytes.extend_from_slice(&[0u8; 1024]);
+    let mut encoder = encoder;
+    encoder.write_all(&tar_bytes).unwrap();
+    encoder.finish().unwrap()
+}
+
+/// The one location outside the cache that a traversal attempt would have to
+/// create for this process; nothing may ever appear there.
+fn escape_probe() -> PathBuf {
+    std::env::temp_dir().join(format!("zed-lisp-escape-probe-{}", std::process::id()))
+}
+
+fn assert_rejected_member(
+    root: &Path,
+    fixture: Vec<u8>,
+    platform: (zed::Os, zed::Architecture),
+    asset: &str,
+) {
+    let outside = escape_probe();
+    let _ = std::fs::remove_dir_all(&outside);
+    let source = FakeSource::serving(fixture, asset);
+
+    let error = resolve_llsp(root, None, &nothing_on_path, &source, platform).unwrap_err();
+
+    assert!(
+        error.contains("unsafe archive member"),
+        "a traversal member must be rejected by name: {error}"
+    );
+    assert_no_usable_entry(root);
+    assert!(
+        !outside.exists(),
+        "no member may extract outside the payload directory"
+    );
+}
+
+#[test]
+fn a_rooted_tar_member_installs_nothing() {
+    let root = scratch_dir("rooted-tar-member");
+    // A rooted member would make `payload_dir.join(member)` replace the
+    // payload root entirely and write to the absolute path.
+    assert_rejected_member(
+        &root,
+        hostile_tar_fixture("/tmp/escape/llsp", BINARY_CONTENTS),
+        LINUX,
+        LINUX_ASSET,
+    );
+}
+
+#[test]
+fn a_parent_traversing_tar_member_installs_nothing() {
+    let root = scratch_dir("parent-tar-member");
+    assert_rejected_member(
+        &root,
+        hostile_tar_fixture("../escape/llsp", BINARY_CONTENTS),
+        LINUX,
+        LINUX_ASSET,
+    );
+}
+
+#[test]
+fn a_rooted_zip_member_installs_nothing() {
+    let root = scratch_dir("rooted-zip-member");
+    assert_rejected_member(
+        &root,
+        zip_fixture("/tmp/escape", "llsp.exe", BINARY_CONTENTS),
+        WINDOWS,
+        WINDOWS_ASSET,
+    );
+}
+
+#[test]
+fn a_parent_traversing_zip_member_installs_nothing() {
+    let root = scratch_dir("parent-zip-member");
+    assert_rejected_member(
+        &root,
+        zip_fixture("../escape", "llsp.exe", BINARY_CONTENTS),
+        WINDOWS,
+        WINDOWS_ASSET,
+    );
 }
 
 #[test]
@@ -408,6 +541,73 @@ fn a_non_executable_cache_entry_is_an_error_offline() {
             .iter()
             .any(|call| call.starts_with("release_by_tag")),
         "the unreachable release must have been attempted"
+    );
+}
+
+#[test]
+fn a_cache_binary_that_no_longer_matches_its_recorded_digest_is_reinstalled() {
+    let root = scratch_dir("tampered-cache");
+    let entry = make_cache_entry(&root, LINUX_ASSET, true);
+    std::fs::write(entry.join(binary_file_name(LINUX_ASSET)), b"tampered").unwrap();
+    let fixture = tar_gz_fixture(member_dir(LINUX_ASSET), "llsp", BINARY_CONTENTS);
+    let source = FakeSource::serving(fixture, LINUX_ASSET);
+
+    let (_binary, source_kind) =
+        resolve_llsp(&root, None, &nothing_on_path, &source, LINUX).unwrap();
+
+    assert_eq!(
+        source_kind,
+        BinarySource::VerifiedDownload,
+        "a cache binary that fails its recorded digest must never be started"
+    );
+}
+
+#[test]
+fn a_cache_binary_that_fails_its_digest_is_an_error_offline() {
+    let root = scratch_dir("tampered-offline");
+    let entry = make_cache_entry(&root, LINUX_ASSET, true);
+    std::fs::write(entry.join(binary_file_name(LINUX_ASSET)), b"tampered").unwrap();
+    let source = FakeSource::offline();
+
+    let error = resolve_llsp(&root, None, &nothing_on_path, &source, LINUX).unwrap_err();
+
+    assert!(
+        error.contains("Remedies"),
+        "offline with a digested-mismatch entry must return the documented error: {error}"
+    );
+    assert!(
+        verified_cache_binary(&root, LINUX).is_none(),
+        "a digested-mismatch entry must not read as verified"
+    );
+}
+
+#[test]
+fn a_cache_entry_recorded_for_a_foreign_asset_is_not_reused() {
+    let root = scratch_dir("foreign-asset");
+    // The state names an asset this platform never published; the binary
+    // beside it matches nothing the resolver may start.
+    let entry = make_cache_entry(&root, LINUX_ASSET, true);
+    let state_path = entry.join(COMPLETION_STATE_FILE);
+    let state = zed::serde_json::json!({
+        "version": LLSP_RELEASE_TAG,
+        "platform": platform_key(LINUX),
+        "asset": WINDOWS_ASSET,
+        "digest": "0".repeat(64),
+        "binary_sha256": sha256_hex(BINARY_CONTENTS),
+    });
+    std::fs::write(state_path, state.to_string()).unwrap();
+    let source = FakeSource::serving(
+        tar_gz_fixture(member_dir(LINUX_ASSET), "llsp", BINARY_CONTENTS),
+        LINUX_ASSET,
+    );
+
+    let (_binary, source_kind) =
+        resolve_llsp(&root, None, &nothing_on_path, &source, LINUX).unwrap();
+
+    assert_eq!(
+        source_kind,
+        BinarySource::VerifiedDownload,
+        "a cache entry recorded for another platform's asset must not be reused"
     );
 }
 
