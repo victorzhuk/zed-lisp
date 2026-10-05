@@ -1,4 +1,4 @@
-.PHONY: all build check clean fmt lint test check-package
+.PHONY: all build check clean fmt lint test acceptance check-package install-dev
 
 WASM_TARGET = wasm32-wasip2
 
@@ -35,6 +35,14 @@ test: check-package
 		cargo build --tests
 	CARGO_BUILD_JOBS=$(CARGO_BUILD_JOBS) $(TIMEOUT) $(TEST_TIMEOUT_SECONDS)s \
 		env RUST_TEST_THREADS=$(RUST_TEST_THREADS) cargo test -- --test-threads=$(RUST_TEST_THREADS)
+
+# Opt-in real-server acceptance suite (tests/llsp_stdio.rs): drives a real
+# llsp binary over stdio, selected by LLSP_BINARY or `llsp` on PATH. Kept
+# out of `make test` so the ordinary run stays hermetic; the historical
+# detector is invoked separately with LLSP_HISTORICAL_BINARY set.
+acceptance:
+	$(TIMEOUT) $(TEST_TIMEOUT_SECONDS)s \
+		cargo test --test llsp_stdio -- --ignored --skip historical_language_id_regression_detected
 
 check-package:
 	@python3 scripts/check_package.py

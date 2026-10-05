@@ -1,12 +1,15 @@
 //! Real-server acceptance harness for the landed llsp cutover.
 //!
 //! Every test drives a real `llsp` process over stdio with framed JSON-RPC —
-//! no mock, no fixture, no recorded transcript. The positive entry point
-//! reads `LLSP_BINARY` (falling back to the documented install path) and
-//! validates the candidate against the active baseline pin before driving
-//! it; a missing, wrong-version, or non-starting server is a loud failure,
-//! never a skip and never a recorded pass. The historical entry point
-//! (`historical_language_id_regression_detected`) reads
+//! no mock, no fixture, no recorded transcript. The suite is opt-in because
+//! it needs a real server binary: `make acceptance` (or
+//! `cargo test --test llsp_stdio -- --ignored`) invokes it, while the plain
+//! `make test` run stays hermetic. When the suite does run, a missing,
+//! wrong-version, or non-starting server is a loud failure, never a skip and
+//! never a recorded pass. The positive entry point reads `LLSP_BINARY`,
+//! falling back to an `llsp` found on `PATH`, and validates the candidate
+//! against the active baseline pin before driving it. The historical entry
+//! point (`historical_language_id_regression_detected`) reads
 //! `LLSP_HISTORICAL_BINARY` and validates exact `v0.2.0` provenance under
 //! its own allowlist.
 //!
@@ -21,7 +24,6 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::time::{Duration, Instant};
 
 const PINNED_VERSION: &str = "0.2.1";
-const DEFAULT_BINARY: &str = "/home/zhuk/.local/bin/llsp";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 const LISPICO_CL_TEXT: &str = "(f [x])\n(car '(1 2))\n(first [1 2])\n(def probe-me 1)\n";
@@ -33,7 +35,7 @@ const LISPICO_CLOJURE_TEXT: &str = "#(1 2)\n(car '(1 2))\n(first [1 2])\n(def pr
 /// every spawn below uses the literal relative path `./llsp` inside that
 /// sandbox and no external string ever reaches a spawn call.
 struct Candidate {
-    sandbox: PathBuf,
+    sandbox: tempfile::TempDir,
 }
 
 impl Candidate {
@@ -58,19 +60,21 @@ impl Candidate {
         // a sandbox, or one copy's write handle makes the other's exec fail
         // with ETXTBSY.
         static NEXT_SANDBOX: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-        let sandbox = std::env::temp_dir().join(format!(
-            "llsp-acceptance-binary-{}-{}",
-            std::process::id(),
-            NEXT_SANDBOX.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-        ));
-        std::fs::create_dir_all(&sandbox).expect("sandbox is creatable");
-        std::fs::copy(&canonical, sandbox.join("llsp"))
+        let sandbox = tempfile::Builder::new()
+            .prefix(&format!(
+                "llsp-acceptance-binary-{}-{}-",
+                std::process::id(),
+                NEXT_SANDBOX.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            ))
+            .tempdir()
+            .expect("sandbox is creatable");
+        std::fs::copy(&canonical, sandbox.path().join("llsp"))
             .expect("the validated llsp binary is copyable into the sandbox");
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(
-                sandbox.join("llsp"),
+                sandbox.path().join("llsp"),
                 std::fs::Permissions::from_mode(0o755),
             )
             .expect("the sandboxed llsp binary takes its executable bit");
@@ -95,9 +99,11 @@ impl Candidate {
         let mut attempts = 0;
         loop {
             attempts += 1;
-            match spawn(&self.sandbox) {
+            match spawn(self.sandbox.path()) {
                 Ok(result) => return result,
-                Err(err) if err.kind() == std::io::ErrorKind::ExecutableFileBusy && attempts < 5 => {
+                Err(err)
+                    if err.kind() == std::io::ErrorKind::ExecutableFileBusy && attempts < 5 =>
+                {
                     std::thread::sleep(std::time::Duration::from_millis(100));
                 }
                 Err(err) => panic!("the sandboxed llsp binary could not be started: {err}"),
@@ -106,18 +112,12 @@ impl Candidate {
     }
 }
 
-impl Drop for Candidate {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.sandbox);
-    }
-}
-
 fn pinned_candidate() -> Candidate {
-    let raw = match std::env::var("LLSP_BINARY") {
-        Ok(path) if !path.is_empty() => path,
-        _ => DEFAULT_BINARY.to_string(),
+    let (raw, route) = match std::env::var("LLSP_BINARY") {
+        Ok(path) if !path.is_empty() => (path, "LLSP_BINARY"),
+        _ => (candidate_on_path(), "PATH"),
     };
-    let candidate = Candidate::install(&raw, "LLSP_BINARY (the pinned llsp candidate)");
+    let candidate = Candidate::install(&raw, &format!("{route} (the pinned llsp candidate)"));
     let version = candidate.version();
     assert!(
         version.contains(PINNED_VERSION),
@@ -126,6 +126,26 @@ fn pinned_candidate() -> Candidate {
          migrate-to-llsp-upstream-gates/gates.md, v{PINNED_VERSION}, 436bc84)"
     );
     candidate
+}
+
+/// The candidate when `LLSP_BINARY` is unset: the first `llsp` executable on
+/// `PATH`. A missing candidate is a loud failure naming both selection
+/// routes; the pin check in `pinned_candidate` rejects a wrong build.
+fn candidate_on_path() -> String {
+    let search_path = std::env::var_os("PATH").unwrap_or_default();
+    for dir in std::env::split_paths(&search_path) {
+        for name in ["llsp", "llsp.exe"] {
+            let candidate = dir.join(name);
+            if candidate.is_file() {
+                return candidate.display().to_string();
+            }
+        }
+    }
+    panic!(
+        "no llsp candidate for the acceptance suite: set LLSP_BINARY to the \
+         pinned v{PINNED_VERSION} build or put `llsp` on PATH; the suite never \
+         skips and never substitutes an unvalidated binary"
+    );
 }
 
 struct Message {
@@ -159,17 +179,16 @@ struct Server {
 /// inside the candidate's private sandbox, with HOME/XDG_CONFIG_HOME and the
 /// working directory pointed at the isolated `root`.
 fn spawn_server(root: &Path, candidate: &Candidate) -> Server {
-    let mut child = candidate
-        .spawn_with_retry(|sandbox| {
-            Command::new("./llsp")
-                .current_dir(sandbox)
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::null())
-                .env("HOME", root)
-                .env("XDG_CONFIG_HOME", root)
-                .spawn()
-        });
+    let mut child = candidate.spawn_with_retry(|sandbox| {
+        Command::new("./llsp")
+            .current_dir(sandbox)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .env("HOME", root)
+            .env("XDG_CONFIG_HOME", root)
+            .spawn()
+    });
     let stdout = child.stdout.take().expect("piped stdout");
     let stdin = child.stdin.take().expect("piped stdin");
     let inbox: Inbox = std::sync::Arc::new((
@@ -269,18 +288,17 @@ impl Server {
             let remaining = deadline.saturating_duration_since(Instant::now());
             {
                 let mut pending = queue.lock().expect("inbox lock");
-                if let Some(position) = pending.iter().position(|m| {
-                    m.method.is_none() && m.id == Some(id)
-                }) {
+                if let Some(position) = pending
+                    .iter()
+                    .position(|m| m.method.is_none() && m.id == Some(id))
+                {
                     let message = pending.remove(position).expect("position is valid");
                     return message.result.expect("successful responses carry a result");
                 }
                 if remaining.is_zero() {
                     panic!("real llsp server did not answer {method} within {REQUEST_TIMEOUT:?}");
                 }
-                let (guard, timeout) = signal
-                    .wait_timeout(pending, remaining)
-                    .expect("inbox lock");
+                let (guard, timeout) = signal.wait_timeout(pending, remaining).expect("inbox lock");
                 drop(guard);
                 let _ = timeout;
             }
@@ -313,9 +331,7 @@ impl Server {
                 if remaining.is_zero() {
                     panic!("real llsp server published no diagnostics for {uri} within {REQUEST_TIMEOUT:?}");
                 }
-                let (guard, timeout) = signal
-                    .wait_timeout(pending, remaining)
-                    .expect("inbox lock");
+                let (guard, timeout) = signal.wait_timeout(pending, remaining).expect("inbox lock");
                 drop(guard);
                 let _ = timeout;
             }
@@ -358,9 +374,11 @@ impl Drop for Server {
 
 impl Server {
     fn send_raw_shutdown(&mut self) -> std::io::Result<()> {
-        let message = serde_json::json!({"jsonrpc": "2.0", "id": 0, "method": "shutdown", "params": null});
+        let message =
+            serde_json::json!({"jsonrpc": "2.0", "id": 0, "method": "shutdown", "params": null});
         let body = serde_json::to_vec(&message)?;
-        self.stdin.write_all(format!("Content-Length: {}\r\n\r\n", body.len()).as_bytes())?;
+        self.stdin
+            .write_all(format!("Content-Length: {}\r\n\r\n", body.len()).as_bytes())?;
         self.stdin.write_all(&body)?;
         self.stdin.write_all(
             format!(
@@ -369,7 +387,8 @@ impl Server {
             )
             .as_bytes(),
         )?;
-        self.stdin.write_all(br#"{"jsonrpc":"2.0","method":"exit"}"#)?;
+        self.stdin
+            .write_all(br#"{"jsonrpc":"2.0","method":"exit"}"#)?;
         self.stdin.flush()
     }
 }
@@ -448,18 +467,29 @@ fn invalid_syntax_count(publish: &serde_json::Value) -> usize {
         .unwrap_or(0)
 }
 
-fn scratch(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!(
-        "llsp-acceptance-{}-{}",
-        name,
-        std::process::id()
-    ));
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).unwrap();
-    dir
+/// A named acceptance workspace that removes itself when the test ends; it
+/// derefs to the directory path so call sites read as before.
+struct Scratch(tempfile::TempDir);
+
+impl std::ops::Deref for Scratch {
+    type Target = Path;
+
+    fn deref(&self) -> &Path {
+        self.0.path()
+    }
+}
+
+fn scratch(name: &str) -> Scratch {
+    Scratch(
+        tempfile::Builder::new()
+            .prefix(&format!("llsp-acceptance-{name}-"))
+            .tempdir()
+            .unwrap(),
+    )
 }
 
 #[test]
+#[ignore = "real-server acceptance: run via `make acceptance` (needs LLSP_BINARY or llsp on PATH); a missing server fails loudly when the suite is invoked"]
 fn dialect_identity_and_diagnostics_survive_an_accepted_settings_change() {
     let root = scratch("retention");
     let candidate = pinned_candidate();
@@ -467,7 +497,12 @@ fn dialect_identity_and_diagnostics_survive_an_accepted_settings_change() {
 
     let lispico_cl = make_buffer(&root, "retention-cl", LISPICO_CL_TEXT, "lispico-cl");
     let lisp = make_buffer(&root, "retention-lisp", LISPICO_CL_TEXT, "lisp");
-    let clojure = make_buffer(&root, "retention-clojure", LISPICO_CLOJURE_TEXT, "lispico-clojure");
+    let clojure = make_buffer(
+        &root,
+        "retention-clojure",
+        LISPICO_CLOJURE_TEXT,
+        "lispico-clojure",
+    );
 
     let mut opened = Vec::new();
     for (buffer, text) in [
@@ -528,6 +563,7 @@ fn dialect_identity_and_diagnostics_survive_an_accepted_settings_change() {
 }
 
 #[test]
+#[ignore = "real-server acceptance: run via `make acceptance` (needs LLSP_BINARY or llsp on PATH); a missing server fails loudly when the suite is invoked"]
 fn unsaved_edits_clear_diagnostics_without_any_save() {
     let root = scratch("unsaved");
     let candidate = pinned_candidate();
@@ -562,6 +598,7 @@ fn unsaved_edits_clear_diagnostics_without_any_save() {
 }
 
 #[test]
+#[ignore = "real-server acceptance: run via `make acceptance` (needs LLSP_BINARY or llsp on PATH); a missing server fails loudly when the suite is invoked"]
 fn save_reload_and_close_reopen_preserve_the_dialect() {
     let root = scratch("lifecycle");
     let candidate = pinned_candidate();
@@ -599,14 +636,23 @@ fn save_reload_and_close_reopen_preserve_the_dialect() {
 }
 
 #[test]
+#[ignore = "real-server acceptance: run via `make acceptance` (needs LLSP_BINARY or llsp on PATH); a missing server fails loudly when the suite is invoked"]
 fn a_restarted_server_restores_every_open_buffer() {
     let root = scratch("restart");
     let candidate = pinned_candidate();
     let lispico_cl = make_buffer(&root, "restart-cl", LISPICO_CL_TEXT, "lispico-cl");
-    let clojure = make_buffer(&root, "restart-clojure", LISPICO_CLOJURE_TEXT, "lispico-clojure");
+    let clojure = make_buffer(
+        &root,
+        "restart-clojure",
+        LISPICO_CLOJURE_TEXT,
+        "lispico-clojure",
+    );
 
     let mut server = initialize(&root, &candidate);
-    for (buffer, text) in [(&lispico_cl, LISPICO_CL_TEXT), (&clojure, LISPICO_CLOJURE_TEXT)] {
+    for (buffer, text) in [
+        (&lispico_cl, LISPICO_CL_TEXT),
+        (&clojure, LISPICO_CLOJURE_TEXT),
+    ] {
         let since = server.mark();
         did_open(&mut server, buffer, text);
         let _ = server.wait_publish(&buffer.uri, since);
@@ -616,7 +662,10 @@ fn a_restarted_server_restores_every_open_buffer() {
     let _ = server.send_raw_shutdown();
 
     let mut restarted = initialize(&root, &candidate);
-    for (buffer, text) in [(&lispico_cl, LISPICO_CL_TEXT), (&clojure, LISPICO_CLOJURE_TEXT)] {
+    for (buffer, text) in [
+        (&lispico_cl, LISPICO_CL_TEXT),
+        (&clojure, LISPICO_CLOJURE_TEXT),
+    ] {
         let since = restarted.mark();
         did_open(&mut restarted, buffer, text);
         let publish = restarted.wait_publish(&buffer.uri, since);
@@ -632,12 +681,21 @@ fn a_restarted_server_restores_every_open_buffer() {
         } else {
             ("lispico-clojure", "lispico-clojure")
         };
-        assert_eq!(Some(expected.0), fence.as_deref(), "restarted dialect fence");
-        assert_eq!(Some(expected.1), builtin.as_deref(), "restarted dialect name");
+        assert_eq!(
+            Some(expected.0),
+            fence.as_deref(),
+            "restarted dialect fence"
+        );
+        assert_eq!(
+            Some(expected.1),
+            builtin.as_deref(),
+            "restarted dialect name"
+        );
     }
 }
 
 #[test]
+#[ignore = "real-server acceptance: run via `make acceptance` (needs LLSP_BINARY or llsp on PATH); a missing server fails loudly when the suite is invoked"]
 fn two_workspaces_keep_isolated_configurations() {
     let root_a = scratch("workspace-a");
     let root_b = scratch("workspace-b");
@@ -663,8 +721,16 @@ fn two_workspaces_keep_isolated_configurations() {
     let (fence_a, builtin_a) = server_a.hover(&buffer_a.uri, 2, 1);
     let (fence_b, builtin_b) = server_b.hover(&buffer_b.uri, 2, 1);
     for (fence, builtin, workspace) in [(fence_a, builtin_a, "A"), (fence_b, builtin_b, "B")] {
-        assert_eq!(Some("lispico-cl"), fence.as_deref(), "workspace {workspace} dialect fence");
-        assert_eq!(Some("lispico-cl"), builtin.as_deref(), "workspace {workspace} dialect name");
+        assert_eq!(
+            Some("lispico-cl"),
+            fence.as_deref(),
+            "workspace {workspace} dialect fence"
+        );
+        assert_eq!(
+            Some("lispico-cl"),
+            builtin.as_deref(),
+            "workspace {workspace} dialect name"
+        );
     }
 }
 
